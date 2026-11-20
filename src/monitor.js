@@ -177,7 +177,7 @@ function fmtDur(s) {
 
 // ---- monitor ----
 
-export function createMonitor({ store, live, trackerId, sendCommand, now = Date.now, tz = process.env.TZ ?? 'UTC', log = () => {} }) {
+export function createMonitor({ store, live, trackerId, sendCommand, posRequestAllowed = () => true, now = Date.now, tz = process.env.TZ ?? 'UTC', log = () => {} }) {
   const mon = new EventEmitter();
   const tid = () => (typeof trackerId === 'function' ? trackerId() : trackerId);
   const nowS = () => Math.floor(now() / 1000);
@@ -564,7 +564,7 @@ export function createMonitor({ store, live, trackerId, sendCommand, now = Date.
     notify();
     await reconcile();
     lastPosRequestAt = now();
-    try { await runCommand('auto:chase', 'pos_request', true); } catch (e) { log(`monitor: pos_request failed: ${e?.message ?? e}`); }
+    if (posRequestAllowed()) try { await runCommand('auto:chase', 'pos_request', true); } catch (e) { log(`monitor: pos_request failed: ${e?.message ?? e}`); }
   }
 
   async function endChase(reason) {
@@ -598,7 +598,7 @@ export function createMonitor({ store, live, trackerId, sendCommand, now = Date.
       if (c) {
         if (ts - c.since >= s.chase.maxHours * 3600) await endChase('timeout');
         else if (cur?.battery != null && cur.battery <= s.chase.minBattery) chaseBatteryFloor(cur.battery);
-        else if (!cur?.controls.live.active && nowMs - lastPosRequestAt >= C.posRequestEveryS * 1000) {
+        else if (posRequestAllowed() && !cur?.controls.live.active && nowMs - lastPosRequestAt >= C.posRequestEveryS * 1000) {
           lastPosRequestAt = nowMs;
           try { await runCommand('auto:chase', 'pos_request', true); } catch (e) { log(`monitor: pos_request failed: ${e?.message ?? e}`); }
         }

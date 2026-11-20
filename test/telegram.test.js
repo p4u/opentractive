@@ -145,6 +145,15 @@ test('a group pairs with /start@bot, any member uses commands and buttons, alert
   assert.ok((await textsTo(mock, -1001234)).some((x) => x.startsWith('<b>OUT</b>')));
 });
 
+test('/locate says so and sends nothing when the account does not allow pos_request', async (t) => {
+  const { mock, monitor, bot } = await setup(t, { posRequestAllowed: () => false });
+  await say(mock, 1001, '/locate');
+  await until(() => bot.status().handled >= 1, { timeout: 5000 });
+  await bot.idle();
+  assert.ok((await textsTo(mock, 1001)).includes('Locate now is not available for this Tractive account.'));
+  assert.ok(!monitor.calls.some((c) => c[0] === 'command'));
+});
+
 test('commands from an approved chat call the monitor, answer in plain text and are logged', async (t) => {
   const { mock, monitor, store, bot } = await setup(t);
   const cmds = ['/status', '/where', '/live on', '/locate', '/led on', '/buzz off', '/chase off', '/watch on', '/walk', '/walk 30', '/walk off',

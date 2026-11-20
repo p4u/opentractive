@@ -50,6 +50,7 @@ export default {
     'live.locate.label': 'Locate now',
     'live.locate.btn': 'Locate',
     'live.locate.hint': 'Asks the tracker for one fresh fix now (about 30 s).',
+    'live.locate.unavailable': 'Not offered by Tractive for this account. Live tracking gives fixes every 2-3 s instead.',
     'live.locate.idle': 'Ready',
     'live.locate.pending': 'Waiting for the fix…',
     'live.locate.gaveUp': 'No new fix arrived; the tracker may be in a Wi-Fi zone or asleep.',

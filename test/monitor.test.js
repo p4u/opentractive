@@ -12,7 +12,7 @@ const clone = (o) => structuredClone(o);
 const FULL_DAY = [{ days: [1, 2, 3, 4, 5, 6, 7], from: '00:00', to: '23:59' }];
 
 function status(h, patch) { h.live.applyStatus({ message: 'tracker_status', tracker_id: TID, ...patch }); }
-function setup({ battery = 80, settings, store = new Store(':memory:'), clock = fakeClock(), fail = 0 } = {}) {
+function setup({ posRequestAllowed, battery = 80, settings, store = new Store(':memory:'), clock = fakeClock(), fail = 0 } = {}) {
   if (!store.getRaw(`geofences:${TID}`)) {
     store.setRaw(`geofences:${TID}`, [YARD]);
     store.setRaw(`psz:${TID}`, [PSZ_IN, PSZ_OUT]);
@@ -26,7 +26,7 @@ function setup({ battery = 80, settings, store = new Store(':memory:'), clock = 
     if (failures > 0) { failures--; throw Object.assign(new Error('Tractive said no'), { status: 500 }); }
     return { active: on, pending: true, remaining: 0, timeout: 300 };
   };
-  const mon = createMonitor({ store, live, trackerId: TID, sendCommand, now: clock.now, tz: 'Europe/Madrid' });
+  const mon = createMonitor({ store, live, trackerId: TID, sendCommand, posRequestAllowed, now: clock.now, tz: 'Europe/Madrid' });
   const events = [];
   for (const e of ['alert', 'repeat', 'chase', 'chase-position', 'command']) mon.on(e, (...a) => events.push([e, ...a]));
   const h = { clock, store, live, mon, sent, events };
@@ -135,6 +135,16 @@ test('escape: out_possible opens a warn incident, the second outside fix rises t
   assert.equal(ev(h, 'chase')[0][1].active, true);
   assert.equal(ev(h, 'chase-position').length, 1);
   assert.deepEqual(h.store.commands(10).map((c) => c.actor).sort(), ['auto:chase', 'auto:live']);
+});
+
+test('without pos_request permission a chase never sends pos_request while live tracking still reconciles on', async () => {
+  const h = setup({ posRequestAllowed: () => false });
+  await gps(h, 0, 0);
+  await gps(h, 35, 5);
+  assert.ok(h.mon.status().chase);
+  for (let i = 0; i < 2; i++) await tick(h, 60_000);
+  assert.ok(h.sent.some((c) => c.name === 'live_tracking' && c.on));
+  assert.ok(!h.sent.some((c) => c.name === 'pos_request'));
 });
 
 test('a critical incident repeats every 2 min until acked, at most 10 times', async () => {

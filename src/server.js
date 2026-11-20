@@ -288,6 +288,7 @@ export function startServer({ store, app, config = {}, port = 8080, host = '127.
       if (name !== 'live' && !COMMANDS[name]) fail(400, 'name must be live, led, buzzer or pos_request');
       if (typeof on !== 'boolean') fail(400, 'on must be true or false');
       if (name === 'pos_request' && !on) fail(400, 'pos_request can only be turned on');
+      if (name === 'pos_request' && !app.posRequestAllowed()) fail(409, 'Locate now is not available for this Tractive account (the account setting pos_request_allowed is off).');
       known(tid, { write: true });
       if (name === 'live') {
         await monitor.setManualLive(on, 'web');

@@ -67,11 +67,12 @@ export function createApp({
     minGapMs: Number(env.TRACTIVE_MIN_GAP_MS || 5000), log, now, ...tractiveOptions,
   });
   const live = new LiveState({ now, pszPins, pszName: (id) => zones().find((z) => z._id === id)?.name ?? null });
-  const monitor = createMonitor({ store, live, trackerId: followed, sendCommand: (id, name, on) => tractive.command(id, name, on), now, tz, log });
+  const posRequestAllowed = () => store.getRaw('user')?.settings?.pos_request_allowed === true;
+  const monitor = createMonitor({ store, live, trackerId: followed, posRequestAllowed, sendCommand: (id, name, on) => tractive.command(id, name, on), now, tz, log });
   const telegram = createTelegram({
     token: env.TELEGRAM_BOT_TOKEN || '', apiUrl: env.TELEGRAM_API_URL || undefined,
     chatIds: (env.TELEGRAM_CHAT_IDS || '').split(',').map((s) => s.trim()).filter((s) => /^-?\d{1,20}$/.test(s)),
-    botName: env.TELEGRAM_BOT_NAME || undefined, store, monitor, live, trackerId: followed,
+    botName: env.TELEGRAM_BOT_NAME || undefined, store, monitor, live, trackerId: followed, posRequestAllowed,
     petName: () => petOf(followed())?.details?.name || 'The dog', escapesSummary: () => escapesSummary(),
     appUrl: env.APP_URL || '', now, log, ...telegramOptions,
   });
@@ -418,6 +419,7 @@ export function createApp({
         const pet = petOf(id);
         return { ...(live.get(id) ?? { trackerId: id }), followed: id === fid, readOnly: id !== fid, petId: pet?._id ?? null, petName: pet?.details?.name ?? null };
       }),
+      capabilities: { posRequest: posRequestAllowed() },
       channel: ts.channel,
       tractive: { login: ts.login, queue: ts.queue, backfillPendingDays },
       monitor: monitor.status(),
@@ -435,7 +437,7 @@ export function createApp({
   }
 
   return Object.assign(app, {
-    tractive, live, monitor, telegram, store, bases, trackerIds: [], followedId: null, ready,
+    tractive, live, monitor, telegram, store, bases, posRequestAllowed, trackerIds: [], followedId: null, ready,
     start, stop, statePayload, trackerPayload, refresh, audit, escapes, escapesSummary, recompute, backfill, retryLogin, petPhoto,
   });
 }

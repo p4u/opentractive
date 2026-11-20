@@ -150,6 +150,7 @@ Each position fix is classed as `inside`, `outside`, `uncertain` or `psz` (a Wi-
 
 - The API is unofficial and may change without notice.
 - Rate limiting: the default `TRACTIVE_MIN_GAP_MS=5000` spacing gave no HTTP 429 in testing, while 1.2 s spacing gave many. Raise it to `8000` if the Lab shows rate limits.
+- Locate now (`pos_request`) requires the account setting `pos_request_allowed`; otherwise Tractive answers 400 and the app disables the control.
 - Yard watch keeps live tracking on and can empty the battery in about a day.
 
 ## Operations

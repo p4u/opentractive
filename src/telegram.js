@@ -51,7 +51,7 @@ const minutes = (a) => (/^\d{1,3}$/.test(a ?? '') && +a >= 1 && +a <= 720 ? +a :
 const digest = (s) => crypto.createHash('sha256').update(String(s)).digest();
 
 export function createTelegram({
-  token, apiUrl = 'https://api.telegram.org', chatIds = [], store, monitor, live, trackerId, petName = () => 'The dog',
+  token, apiUrl = 'https://api.telegram.org', chatIds = [], store, monitor, live, trackerId, posRequestAllowed = () => true, petName = () => 'The dog',
   escapesSummary = () => [], appUrl = '', now = Date.now, log = () => {}, pollTimeoutS = 50, minIntervalMs = 1000,
   backoffMinMs = 5000, backoffMaxMs = 60000, editEveryMs = 5000, botName: botNameOpt = null, callTimeoutMs = 15000,
 }) {
@@ -180,7 +180,7 @@ export function createTelegram({
     status: () => statusText(),
     where: (chat) => where(chat),
     live: async (chat, [a], actor) => { const on = need(onOff(a), 'live'); await monitor.setManualLive(on, actor); return `Live tracking ${on ? 'on' : 'off'} requested.`; },
-    locate: async (chat, args, actor) => { await monitor.command(actor, tid(), 'pos_request', true); return 'Position requested.'; },
+    locate: async (chat, args, actor) => { if (!posRequestAllowed()) return 'Locate now is not available for this Tractive account.'; await monitor.command(actor, tid(), 'pos_request', true); return 'Position requested.'; },
     led: trackerCmd('led_control', 'led'),
     buzz: trackerCmd('buzzer_control', 'buzz'),
     chase: async (chat, [a], actor) => {

@@ -142,9 +142,10 @@ export async function render(root, { state, signal, bus }) {
     const ywText = ctlText.yw ?? (sending('yw') ? t('live.sending') : t(`live.yw.${ywStatus}`, { n: settings?.yardWatch?.minBattery ?? 35 }));
     const walk = m.walk;
     const power = tr.powerMode;
+    const locateOff = state.capabilities?.posRequest === false;
     const rows = [
       row({ name: 'live', label: t('live.live.label'), hint: t('live.live.hint'), control: sw('live', 'live-toggle', t('live.live.label'), wantOf('live', !!(m.live?.manual || c.live?.active)), sending('live') || !!tr.pszId), status: liveStatusText(), statusId: 'live-status' }),
-      row({ name: 'locate', label: t('live.locate.label'), hint: t('live.locate.hint'), control: `<button type="button" class="pill pill-outline" data-locate data-testid="locate-btn"${sending('locate') ? ' disabled' : ''}>${icon('locate-fixed', { size: 16 })}${esc(t('live.locate.btn'))}</button>`, status: locateText(), statusId: 'locate-status' }),
+      row({ name: 'locate', label: t('live.locate.label'), hint: locateOff ? t('live.locate.unavailable') : t('live.locate.hint'), control: `<button type="button" class="pill pill-outline" data-locate data-testid="locate-btn"${sending('locate') || locateOff ? ' disabled' : ''}>${icon('locate-fixed', { size: 16 })}${esc(t('live.locate.btn'))}</button>`, status: locateText(), statusId: 'locate-status' }),
       row({ name: 'led', label: t('live.led.label'), hint: t('live.led.hint'), control: sw('led', 'led-toggle', t('live.led.label'), wantOf('led', !!c.led?.active), sending('led')), status: stateText('led', c.led?.active, c.led?.pending) }),
       row({ name: 'buzzer', label: t('live.buzzer.label'), hint: t('live.buzzer.hint'), control: sw('buzzer', 'buzzer-toggle', t('live.buzzer.label'), wantOf('buzzer', !!c.buzzer?.active), sending('buzzer')), status: stateText('buzzer', c.buzzer?.active, c.buzzer?.pending) }),
       row({ name: 'chase', label: t('live.chase.label'), hint: t('live.chase.hint'), control: sw('chase', 'chase-toggle', t('live.chase.label'), wantOf('chase', !!m.chase), sending('chase')), status: ctlText.chase ?? (sending('chase') ? t('live.sending') : m.chase ? t('live.chase.since', { time: fmtTime(m.chase.since * 1000) }) : t('live.off')) }),

@@ -119,6 +119,18 @@ test('state, telegram, settings, tracker, lab and error responses carry no secre
   assert.equal(state.monitor.lastFix.cls, 'inside');
 });
 
+test('pos_request is refused with 409 and never reaches Tractive when the account does not allow it', async (t) => {
+  const { request, mock, store } = await setup(t);
+  assert.equal(JSON.parse(await (await request('/api/state')).text()).capabilities.posRequest, true);
+  store.setRaw('user', { settings: {} });
+  assert.equal(JSON.parse(await (await request('/api/state')).text()).capabilities.posRequest, false);
+  const r = await request(`/api/tracker/${TID}/command`, { method: 'POST', body: JSON.stringify({ name: 'pos_request', on: true }) });
+  assert.equal(r.status, 409);
+  assert.match((await r.json()).error, /^Locate now is not available for this Tractive account/);
+  const reqs = await mock.get('/__mock/requests?host=graph');
+  assert.ok(!reqs.some((q) => q.path.includes('pos_request')));
+});
+
 test('commands reach Tractive; Tractive errors map to 502, rate limits to 503 with retryAfter; validation is 400/404', async (t) => {
   const { request, mock } = await setup(t);
   const post = (body, tid = TID) => request(`/api/tracker/${tid}/command`, { method: 'POST', body: JSON.stringify(body) });
