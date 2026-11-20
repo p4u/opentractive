@@ -426,6 +426,12 @@ export function createTractive({
       return Promise.all(stubs.map((s) => get(`/power_saving_zone/${e(s._id)}`)));
     },
     deletePowerSavingZone: async (zid) => enqueue('DELETE', `/power_saving_zone/${e(zid)}`),
+    powerSavingZone: async (zid) => get(`/power_saving_zone/${e(zid)}`),
+    updatePowerSavingZone: async (z) => {
+      if (!z?._id || !z._version || typeof z.zone_id !== 'string' || !z.zone_id) throw new RangeError('zone needs _id, _version and zone_id');
+      const body = { zone_id: z.zone_id, latlong: z.latlong, name: z.name, source: z.source ?? 'WIFI', device_id: z.device_id };
+      return enqueue('PUT', `/power_saving_zone/${e(z._id)}?_version=${e(z._version)}`, { body, command: true });
+    },
     commandStates: async (id) => bulk(COMMANDS.map((n) => ({ _type: 'tracker_command_state', _id: `${String(id).toLowerCase()}_${n}` }))),
     command: async (id, name, on) => {
       if (!COMMANDS.includes(name)) throw new RangeError(`unknown command ${name}`);

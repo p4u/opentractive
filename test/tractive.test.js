@@ -99,7 +99,7 @@ test('the pet photo is refused on its headers or cancelled past 2 MB, never buff
   assert.equal((await calls(mock)).filter((r) => r.path.includes('/media/resource/')).length, 4); // refused bodies are not retried
 });
 
-test('S6: a media error response with an oversized endless body is cancelled, not read', async (t) => {
+test('a media error response with an oversized endless body is cancelled, not read', async (t) => {
   const { client, mock } = await setup(t, { requestTimeoutMs: 20000 });
   await mock.post('/__mock/fail', { match: 'GET /graph/4/media/resource', status: 404, times: 1, image: { chunked: true, type: 'application/json' } });
   const t0 = Date.now();

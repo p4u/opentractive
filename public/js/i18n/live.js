@@ -78,6 +78,8 @@ export default {
     'live.yw.paused-in-psz': 'Paused: in a Wi-Fi zone',
     'live.yw.paused-charging': 'Paused: charging',
     'live.yw.active': 'Active',
+    'live.zone.waiting': 'Wi-Fi zone {name} is switched off (since {since}): the tracker will use GPS here once it moves.',
+    'live.zone.confirmed': 'Wi-Fi zone {name} is switched off: GPS confirmed at {at} (±{acc} m).',
     'live.yw.blind': 'Wi-Fi zones blind the yard: {names}. The hole cannot be located until they are removed in the Tractive phone app: Tracker settings > Power Saving Zones.',
     'live.yw.title': 'Turn yard watch on?',
     'live.yw.body': 'Yard watch keeps live tracking on for hours. Expect the battery to last a day or less.',

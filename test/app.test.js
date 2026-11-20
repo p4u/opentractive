@@ -47,7 +47,7 @@ test('recompute refuses to reconcile when the position read is truncated', (t) =
   assert.equal(store.escapes(TID, t0, now).length, 1);
 });
 
-test('F10: dropped positions are logged, except the ones that are not newer', (t) => {
+test('dropped positions are logged, except the ones that are not newer', (t) => {
   const logs = [];
   const { app } = offline(t, { log: (m) => logs.push(m) });
   const s = Math.floor(Date.now() / 1000), p = ll(0, 0);
@@ -78,7 +78,7 @@ test('after a restart with an open critical incident and a failing Tractive logi
   await until(async () => (await mock.get('/__mock/requests?host=telegram')).some((r) => r.path.endsWith('/getUpdates')), { what: 'telegram polling' });
 });
 
-test('F11: the 15-minute tracker refresh goes on past a failing tracker', async (t) => {
+test('the 15-minute tracker refresh goes on past a failing tracker', async (t) => {
   t.mock.timers.enable({ apis: ['setInterval'] });
   const { app, mock } = await online(t);
   await app.start();
@@ -96,7 +96,7 @@ test('F11: the 15-minute tracker refresh goes on past a failing tracker', async 
 const ZONES = JSON.parse(fs.readFileSync(new URL('./mock/fixtures/power-saving-zone.json', import.meta.url)));
 const FENCES = JSON.parse(fs.readFileSync(new URL('./mock/fixtures/geofences-bulk.json', import.meta.url)));
 
-test('S2: a return home seen only as a zone entry splits two escapes, and recompute keeps both', async (t) => {
+test('a return home seen only as a zone entry splits two escapes, and recompute keeps both', async (t) => {
   const clock = fakeClock(Date.now());
   const { app, store } = offline(t, { now: clock.now });
   store.setRaw(`geofences:${TID}`, [YARD]);
@@ -132,7 +132,7 @@ test('S2: a return home seen only as a zone entry splits two escapes, and recomp
   assert.deepEqual(store.escapes(TID, t0, clock.s()).map((e) => e.t_outside), stored.map((e) => e.t_outside));
 });
 
-test('S3: after a restart already inside a home zone with no fresh position, the open incident closes and the chase ends', async (t) => {
+test('after a restart already inside a home zone with no fresh position, the open incident closes and the chase ends', async (t) => {
   const store = new Store(':memory:');
   store.setRaw(`geofences:${TID}`, FENCES);
   store.setRaw(`psz:${TID}`, ZONES);

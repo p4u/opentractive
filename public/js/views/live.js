@@ -91,10 +91,13 @@ export async function render(root, { state, signal, bus }) {
   }
 
   function renderPsz() {
-    const names = (state.psz ?? []).filter((z) => z.coversYard).map((z) => z.name);
-    $('[data-psz]').innerHTML = names.length
-      ? notice(t('live.psz.advice', { names: names.join(', ') }), { testid: 'psz-advice' })
-      : '';
+    const names = (state.psz ?? []).filter((z) => z.blinds ?? z.coversYard).map((z) => z.name);
+    const off = (state.zones ?? []).filter((z) => z.off);
+    const offText = off.map((z) => (z.confirmedAt
+      ? t('live.zone.confirmed', { name: z.name, at: fmtTime(z.confirmedAt * 1000), acc: Math.round(z.confirmedAcc ?? 0) })
+      : t('live.zone.waiting', { name: z.name, since: z.offAt ? fmtTime(z.offAt * 1000) : '' }))).join(' ');
+    $('[data-psz]').innerHTML = (names.length ? notice(t('live.psz.advice', { names: names.join(', ') }), { testid: 'psz-advice' }) : '')
+      + (off.length ? notice(offText, { testid: 'zone-off-status' }) : '');
   }
 
   // ---- controls ----
@@ -136,7 +139,7 @@ export async function render(root, { state, signal, bus }) {
     const c = ctl(); const m = state.monitor ?? {}; const st = state.settings ?? {};
     const keep = document.activeElement?.dataset?.testid && root.contains(document.activeElement) ? document.activeElement.dataset.testid : null;
     const sending = (n) => busy[n]?.phase === 'sending';
-    const coverNames = (state.psz ?? []).filter((z) => z.coversYard);
+    const coverNames = (state.psz ?? []).filter((z) => z.blinds ?? z.coversYard);
     const ywStatus = m.yardWatch?.status ?? 'off';
     const ywOn = !!st.yardWatchEnabled;
     const ywText = ctlText.yw ?? (sending('yw') ? t('live.sending') : t(`live.yw.${ywStatus}`, { n: settings?.yardWatch?.minBattery ?? 35 }));

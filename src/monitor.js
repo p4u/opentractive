@@ -4,9 +4,10 @@ import { EventEmitter } from 'node:events';
 import { classify, HOME } from './escapes.js';
 import { distanceM, distanceToBoundary, geofenceToPolygon } from './geo.js';
 import { positionRow } from './state.js';
+import { isOff } from './zones.js';
 
 export const RULE_KINDS = ['out_possible', 'out_confirmed', 'left_psz', 'fence_exit', 'danger_enter', 'offline', 'live_failed',
-  'chase_low_battery', 'channel_down', 'battery_low', 'battery_critical', 'charging', 'back_home', 'new_field'];
+  'chase_low_battery', 'channel_down', 'battery_low', 'battery_critical', 'charging', 'back_home', 'new_field', 'zone_confirmed', 'zone_failed'];
 
 const deepFreeze = (o) => { for (const v of Object.values(o)) if (v && typeof v === 'object') deepFreeze(v); return Object.freeze(o); };
 
@@ -20,12 +21,13 @@ export const DEFAULT_SETTINGS = deepFreeze({
     channel_down: { enabled: true, severity: 'warn' }, battery_low: { enabled: true, severity: 'warn' },
     battery_critical: { enabled: true, severity: 'critical' }, charging: { enabled: true, severity: 'info' },
     back_home: { enabled: true, severity: 'info' }, new_field: { enabled: true, severity: 'info' },
+    zone_confirmed: { enabled: true, severity: 'info' }, zone_failed: { enabled: true, severity: 'warn' },
   },
   thresholds: { offlineMin: 75, channelDownMin: 5, batteryLow: 20, batteryCritical: 10, dedupeMin: 10, repeatMin: 2, repeatMax: 10 },
   chase: { auto: true, maxHours: 6, minBattery: 15 },
   yardWatch: {
     enabled: false, windows: [{ days: [1, 2, 3, 4, 5, 6, 7], from: '08:00', to: '22:00' }], minBattery: 35, resumeBattery: 40,
-    mode: 'live', nearFenceM: 15, nearFenceHoldMin: 10,
+    mode: 'live', nearFenceM: 15, nearFenceHoldMin: 10, autoZones: false,
   },
   analysis: { marginM: 10, maxGapS: 600, homePszM: 50 },
 });
@@ -90,13 +92,24 @@ const SCHEMA = obj({
   chase: obj({ auto: bool, maxHours: num(0.5, 24), minBattery: int(0, 90) }),
   yardWatch: obj({
     enabled: bool, windows, minBattery: int(5, 95), resumeBattery: int(0, 100), mode: oneOf('live', 'near-fence'),
-    nearFenceM: num(5, 100), nearFenceHoldMin: int(1, 60),
+    nearFenceM: num(5, 100), nearFenceHoldMin: int(1, 60), autoZones: bool,
   }),
   analysis: obj({ marginM: num(0, 50), maxGapS: int(30, 3600), homePszM: num(0, 500) }),
 });
 
+// Stored settings from an older version miss newer keys: defaults fill them (objects merged, arrays and values kept).
+export function withDefaults(stored, defaults = DEFAULT_SETTINGS) {
+  if (!isObj(stored)) return structuredClone(defaults);
+  const out = structuredClone(defaults);
+  for (const [k, v] of Object.entries(stored)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    out[k] = isObj(v) && isObj(defaults[k]) ? withDefaults(v, defaults[k]) : structuredClone(v);
+  }
+  return out;
+}
+
 export function validateSettings(input) {
-  const errors = {};
+  const errors = Object.create(null); // keys like 'constructor' must not hide behind Object.prototype
   const err = (p, msg) => { errors[p || 'settings'] ??= msg; };
   SCHEMA(input, '', err);
   const t = input?.thresholds, yw = input?.yardWatch;
@@ -106,7 +119,7 @@ export function validateSettings(input) {
   if (isObj(yw) && !errors['yardWatch.minBattery'] && !errors['yardWatch.resumeBattery'] && yw.resumeBattery <= yw.minBattery) {
     errors['yardWatch.resumeBattery'] = 'must be higher than the minimum battery';
   }
-  return Object.keys(errors).length ? { errors } : { settings: structuredClone(input) };
+  return Object.keys(errors).length ? { errors: { ...errors } } : { settings: structuredClone(input) };
 }
 
 // ---- pure helpers ----
@@ -200,7 +213,7 @@ export function createMonitor({ store, live, trackerId, sendCommand, posRequestA
   let ywStatus = 'off', lowLatched = false, nearFenceUntil = 0, offlineRaised = false, disconnectedSince = null, channelDownRaised = false;
   let lastPosRequestAt = -Infinity, lastStatusJson = '';
 
-  const settings = () => structuredClone(store.getKv('settings') ?? DEFAULT_SETTINGS);
+  const settings = () => withDefaults(store.getKv('settings'));
   const chaseKv = () => store.getKv('chase');
   const walkKv = () => store.getKv('walk');
   const st = () => live.get(tid());
@@ -220,7 +233,8 @@ export function createMonitor({ store, live, trackerId, sendCommand, posRequestA
     return (store.getRaw(`psz:${tid()}`) ?? []).map((z) => {
       const [lat, lng] = Array.isArray(z.latlong) ? z.latlong : [null, null];
       const geometric = y && Number.isFinite(lat) && Number.isFinite(lng) ? distanceToBoundary({ lat, lng }, y.polygon) <= s.analysis.homePszM : false;
-      return { id: z._id, name: z.name, lat, lng, geometric, coversYard: s.pszCoversYard[z._id] ?? geometric };
+      const coversYard = s.pszCoversYard[z._id] ?? geometric, off = isOff(z);
+      return { id: z._id, name: z.name, lat, lng, geometric, coversYard, off, blinds: coversYard && !off };
     });
   }
 
@@ -679,6 +693,7 @@ export function createMonitor({ store, live, trackerId, sendCommand, posRequestA
       live.off('position', onPosition);
     },
     idle, tick, reconcile, yard, pszFlags, status, reclassify, detectFields, setWalk, runCommand,
+    raiseAlert: (kind, opts) => raise(kind, opts),
     settings,
     putSettings(input) {
       const r = validateSettings(input);
@@ -748,7 +763,7 @@ export function createMonitor({ store, live, trackerId, sendCommand, posRequestA
     },
     onTimelineEvents: safe((events) => {
       const base = store.getKv('timelineSeen');
-      if (base == null) { store.setKv('timelineSeen', nowS()); return; } // F17: unix seconds
+      if (base == null) { store.setKv('timelineSeen', nowS()); return; } // unix seconds
       let max = base;
       for (const e of events ?? []) {
         const ms = Date.parse(e?.occurredAt ?? e?.startedAt);

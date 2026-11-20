@@ -370,7 +370,7 @@ const crit = (id) => ({ id, t: Math.floor(Date.now() / 1000), tracker_id: TID, k
 const failOnce = (mock, method, rule) => mock.post('/__mock/fail', { match: `POST /telegram/bot${TOKEN}/${method}`, times: 1, ...rule });
 const alertsTo = async (mock, chatId) => (await textsTo(mock, chatId)).filter((x) => x.startsWith('<b>OUT</b>'));
 
-test('F5: a hung call is aborted and an alert is retried; a 502 then 200 delivers the alert once; send failures set lastError', async (t) => {
+test('a hung call is aborted and an alert is retried; a 502 then 200 delivers the alert once; send failures set lastError', async (t) => {
   const mock = await startMock();
   const { bot, store } = await setup(t, { mock, callTimeoutMs: 300 });
   await failOnce(mock, 'sendMessage', { hang: true });
@@ -458,7 +458,7 @@ test('a chat whose first live location failed gets a new one on the next chase f
   assert.equal(lives[0].body.latitude, p1.lat);
 });
 
-test('S1: a queued /where reply is dropped when the chat is removed before its turn', async (t) => {
+test('a queued /where reply is dropped when the chat is removed before its turn', async (t) => {
   const { mock, bot, store } = await setup(t, { minIntervalMs: 300 });
   const pending = bot.sendTest('1001');
   await say(mock, 1001, '/where');
@@ -471,7 +471,7 @@ test('S1: a queued /where reply is dropped when the chat is removed before its t
   assert.equal(s[0].body.text, 'Test message from OpenTractive. Alerts will look like this.');
 });
 
-test('S4: the backlog spans every getUpdates page until an empty one', async (t) => {
+test('the backlog spans every getUpdates page until an empty one', async (t) => {
   const mock = await startMock();
   const date = Math.floor(Date.now() / 1000);
   for (let i = 0; i < 130; i++) {
@@ -488,7 +488,7 @@ test('S4: the backlog spans every getUpdates page until an empty one', async (t)
   assert.ok(answers.every((x) => x.body.text === 'Ignored an old button press'));
 });
 
-test('S5: a response that sends its headers and then hangs is a transient failure: the alert is retried', async (t) => {
+test('a response that sends its headers and then hangs is a transient failure: the alert is retried', async (t) => {
   const { mock, bot, store } = await setup(t, { callTimeoutMs: 300 });
   await failOnce(mock, 'sendMessage', { status: 200, headersThenHang: true });
   await bot.onAlert(crit(45), 'open');
@@ -497,7 +497,7 @@ test('S5: a response that sends its headers and then hangs is a transient failur
   assert.equal(store.alertMessages(45).length, 1);
 });
 
-test('S7: a live location that lands after its chase ended or changed is stopped, never attached to the next chase', async (t) => {
+test('a live location that lands after its chase ended or changed is stopped, never attached to the next chase', async (t) => {
   const { mock, monitor, bot } = await setup(t, { minIntervalMs: 300 });
   const p0 = ll(30, 0);
   const since = Math.floor(Date.now() / 1000);
@@ -523,7 +523,7 @@ test('S7: a live location that lands after its chase ended or changed is stopped
   assert.equal((await stops())[1], (await lives())[1].result.message_id);
 });
 
-test('S9: /chase on during walk mode answers with the refusal', async (t) => {
+test('/chase on during walk mode answers with the refusal', async (t) => {
   const { mock, monitor, bot } = await setup(t);
   const base = monitor.status();
   monitor.status = () => ({ ...base, walk: { until: Math.floor(Date.now() / 1000) + 3600 } });
@@ -533,4 +533,27 @@ test('S9: /chase on during walk mode answers with the refusal', async (t) => {
   const [text] = await textsTo(mock, 1001);
   assert.doesNotMatch(text, /Chase started/);
   assert.match(text, /walk mode/i);
+});
+
+test('/zone lists the Wi-Fi zones and switches the ones covering the yard, or one by name', async (t) => {
+  const zones = [{ id: 'z1', name: 'Home', off: false }, { id: 'z2', name: 'Shed', off: false }];
+  const calls = [];
+  const zoneSwitch = {
+    status: () => zones.map((z) => ({ ...z })),
+    switchZone: async (id, on, actor) => { calls.push([id, on, actor]); const z = zones.find((x) => x.id === id); z.off = !on; z.offAt = on ? null : 1_790_000_000; return { ...z }; },
+  };
+  const { mock, monitor, bot } = await setup(t, { zoneSwitch: () => zoneSwitch });
+  monitor.pszFlags = () => [{ id: 'z1', coversYard: true }, { id: 'z2', coversYard: false }];
+  await say(mock, 1001, '/zone');
+  await say(mock, 1001, '/zone off');
+  await say(mock, 1001, '/zone off shed');
+  await say(mock, 1001, '/zone on');
+  await say(mock, 1001, '/zone maybe');
+  await until(() => bot.status().handled >= 5, { timeout: 5000 });
+  await bot.idle();
+  const texts = await textsTo(mock, 1001);
+  assert.ok(texts.some((x) => x.startsWith('Wi-Fi zones:\nHome: on\nShed: on')));
+  assert.ok(texts.some((x) => x.includes('Home: off since') && x.includes('waiting for the tracker to move')));
+  assert.ok(texts.some((x) => x.includes('Usage: /zone')));
+  assert.deepEqual(calls, [['z1', false, 'telegram:1001'], ['z2', false, 'telegram:1001'], ['z1', true, 'telegram:1001'], ['z2', true, 'telegram:1001']]);
 });

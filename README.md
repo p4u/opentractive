@@ -117,7 +117,9 @@ Each Tractive endpoint the app uses, the client method that calls it, and where 
 | PUT `geofence/{gid}?_version=` | `updateGeofence()` | Fences > rename, type, active, icon, edit shape | not yet |
 | DELETE `geofence/{gid}` | `deleteGeofence()` | Fences > Delete | not yet |
 | GET `tracker/{id}/power_saving_zones`, `power_saving_zone/{zid}` | `powerSavingZones()` | Tracker > Wi-Fi zones; Live map pins | 2026-11-20 (read) |
-| DELETE `power_saving_zone/{zid}` | `deletePowerSavingZone()` | Tracker > Wi-Fi zones > Delete (experimental) | not yet |
+| DELETE `power_saving_zone/{zid}` | `deletePowerSavingZone()` | Tracker > Wi-Fi zones > Delete (experimental) | 2026-11-20 (on a test zone) |
+| PUT `power_saving_zone/{zid}?_version=` | `updatePowerSavingZone()` | Tracker > Wi-Fi zones > Switch off/on; Telegram `/zone`; Yard watch automatic mode | 2026-11-20 |
+| POST `power_saving_zone/tracker/power_saving_zones/{id}` | (not used by the app) creates a zone from `{zone_id: <Wi-Fi name>, latlong, name, source: "WIFI"}` without the phone's Wi-Fi scan | Lab > Console | 2026-11-20 (on a test zone) |
 | bulk `tracker_command_state` | `commandStates()` | Live controls | 2026-11-20 (read) |
 | GET `tracker/{id}/command/live_tracking/{on,off}` | `command()` via the reconciler | Live > Live tracking; Telegram `/live` | not yet |
 | GET `tracker/{id}/command/led_control/{on,off}` | `command()` | Live > Light; Telegram `/led` | 2026-11-20 (on and off: HTTP 200; pending while in a Wi-Fi zone) |
@@ -139,6 +141,16 @@ Each Tractive endpoint the app uses, the client method that calls it, and where 
 | GET `media/resource/{id}.jpg` | `petPhoto()` | Pet > Photo | not yet |
 | POST channel `3/channel` | `startChannel()` | Live (every live value); Lab > Channel | 2026-11-20 (read) |
 | any graph/aps/timeline path | `raw()` | Lab > Console | not yet |
+
+## Wi-Fi zone switch
+
+Inside a Wi-Fi zone (Tractive's Power Saving Zone) the tracker reports no GPS, so an escape through a hole in a yard that the home Wi-Fi reaches leaves no trace. A zone is matched by the Wi-Fi network name stored in its `zone_id`. The app switches a zone off by renaming that field to the network name plus `~ot-off` (a name no network has) and switches it back on by restoring the name; the zone keeps its id, pin and name. The original name is stored before every change, and the marker alone is enough to restore it.
+
+- Tracker > Wi-Fi zones: a switch per zone with its status ("Off since 22:50, waiting for the tracker to move", then "GPS confirmed at 09:14").
+- Telegram: `/zone` lists the zones, `/zone off` and `/zone on` switch the zones that cover the yard, `/zone off <name>` one zone.
+- Alerts > Yard watch: "Switch off the Wi-Fi zones that cover the yard" switches them off when a Yard watch window starts and back on when it ends (and after a restart outside a window). Manual switches are left alone.
+
+The tracker applies a change the next time it moves: a still tracker sleeps for hours and talks to nobody. The first GPS fix after a zone went off is recorded as the confirmation and raises an info alert. A switched-off zone costs battery while the tracker is in its range.
 
 ## How escape detection works
 

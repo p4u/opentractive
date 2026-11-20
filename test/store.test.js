@@ -45,7 +45,7 @@ test('insertPosition fills only NULL columns on conflict', () => {
   assert.equal(row.speed, 3);
 });
 
-test('S2: a synthetic zone row never changes a real fix, and a real fix at the same second replaces it', () => {
+test('a synthetic zone row never changes a real fix, and a real fix at the same second replaces it', () => {
   const s = new Store(':memory:');
   const zone = (t) => pos(t, { lat: 42, lng: 3, acc: 30, sensor: 'KNOWN_WIFI', psz_id: 'z1', source: 'zone' });
   s.insertPosition(pos(100));

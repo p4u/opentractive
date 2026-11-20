@@ -6,7 +6,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { createTractive } from './tractive.js';
 import { LiveState, normalizePosition, positionRow } from './state.js';
-import { createMonitor } from './monitor.js';
+import { createMonitor, inWindow } from './monitor.js';
+import { createZoneSwitch, ssidOf, isOff } from './zones.js';
 import { createTelegram } from './telegram.js';
 import { analyze, classify, detectEpisodes, reconcileStored } from './escapes.js';
 import { perimeterLength } from './geo.js';
@@ -72,9 +73,16 @@ export function createApp({
   const telegram = createTelegram({
     token: env.TELEGRAM_BOT_TOKEN || '', apiUrl: env.TELEGRAM_API_URL || undefined,
     chatIds: (env.TELEGRAM_CHAT_IDS || '').split(',').map((s) => s.trim()).filter((s) => /^-?\d{1,20}$/.test(s)),
-    botName: env.TELEGRAM_BOT_NAME || undefined, store, monitor, live, trackerId: followed, posRequestAllowed,
+    botName: env.TELEGRAM_BOT_NAME || undefined, store, monitor, live, trackerId: followed, posRequestAllowed, zoneSwitch: () => zoneSwitch,
     petName: () => petOf(followed())?.details?.name || 'The dog', escapesSummary: () => escapesSummary(),
     appUrl: env.APP_URL || '', now, log, ...telegramOptions,
+  });
+
+  const zoneSwitch = createZoneSwitch({
+    store, tractive, trackerId: followed, zones: () => zones(), refresh: () => refresh('power_saving_zone'),
+    inWindow: () => inWindow(monitor.settings().yardWatch.windows, now(), tz), settings: () => monitor.settings(),
+    flags: () => monitor.pszFlags(), now, log, notify: () => emitEvent('state', app.statePayload()),
+    raise: (kind, opts) => monitor.raiseAlert(kind, opts),
   });
 
   let backfillPendingDays = 0;
@@ -158,7 +166,9 @@ export function createApp({
   tractive.on('login', guard('login', (s) => { if (s === 'ok' && started) return boot(); return null; }));
 
   live.on('position', guard('position', (id, pos) => {
-    store.insertPosition(positionRow(id, pos, 'channel'));
+    const row = positionRow(id, pos, 'channel');
+    store.insertPosition(row);
+    zoneSwitch.onFix(row);
     emitEvent('position', { trackerId: id, pos });
   }));
   live.on('drop', (id, why) => { if (why !== 'not newer') log(`position dropped for ${id}: ${why}`); });
@@ -220,6 +230,7 @@ export function createApp({
     every(15 * MIN, 'trackers', async () => { // one failing tracker does not skip the others
       for (const id of app.trackerIds) { try { await loaders.tracker(id); } catch (e) { log(`tracker ${id}: ${errText(e)}`); } }
     });
+    every(MIN, 'zones', () => followed() && zoneSwitch.tick()); // also restores auto-switched zones after a restart
     every(60 * MIN, 'positions', async () => followed() && insertRest(followed(), await tractive.positions(followed(), nowS() - 2 * 3600, nowS())));
     const first = setTimeout(() => { guard('retention', retention)(); every(DAY * 1000, 'retention', retention); }, 10 * MIN);
     first.unref();
@@ -333,7 +344,7 @@ export function createApp({
   // fixes only around stored episodes plus the requested range capped at 31 days.
   function escapes({ trackerId, from, to }) {
     const y = trackerId === followed() ? monitor.yard() : null;
-    const blind = trackerId === followed() ? monitor.pszFlags().filter((z) => z.coversYard).map(({ id, name }) => ({ id, name })) : [];
+    const blind = trackerId === followed() ? monitor.pszFlags().filter((z) => z.blinds).map(({ id, name }) => ({ id, name })) : [];
     if (!y) return { yard: null, blind, episodes: [], strip: [], peaks: [] };
     const stored = store.escapes(trackerId, from, to);
     const windows = mergeWindows([
@@ -406,7 +417,7 @@ export function createApp({
     return {
       tracker: raw('tracker'), readOnly: tid !== followed(),
       subscription: rawPrefix('subscription:').find((s) => s?.tracker_id === tid) ?? null,
-      psz: (raw('psz') ?? []).map((z) => ({ ...z, coversYard: flags.get(z._id)?.coversYard ?? false, geometric: flags.get(z._id)?.geometric ?? false, current: cur === z._id })),
+      psz: (raw('psz') ?? []).map((z) => ({ ...z, zone_id: ssidOf(z), off: isOff(z), coversYard: flags.get(z._id)?.coversYard ?? false, geometric: flags.get(z._id)?.geometric ?? false, current: cur === z._id })),
       shares: raw('shares') ?? [], commandStates: raw('commands') ?? [], reachable: raw('reachable'), hw: raw('hw'), pos: raw('pos'), range: raw('range'),
     };
   }
@@ -425,6 +436,7 @@ export function createApp({
       monitor: monitor.status(),
       yard: (() => { const y = monitor.yard(); return y && { id: y.id, name: y.name, polygon: y.polygon.map((p) => [p.lat, p.lng]) }; })(),
       psz: monitor.pszFlags(),
+      zones: zoneSwitch.status(),
       settings: { yardGeofenceId: s.yardGeofenceId, yardWatchEnabled: s.yardWatch.enabled, chaseAuto: s.chase.auto },
       telegram: telegram.status(),
       alerts: { unacked: store.unackedCritical() },
@@ -437,7 +449,7 @@ export function createApp({
   }
 
   return Object.assign(app, {
-    tractive, live, monitor, telegram, store, bases, posRequestAllowed, trackerIds: [], followedId: null, ready,
+    tractive, live, monitor, telegram, store, bases, posRequestAllowed, zoneSwitch, trackerIds: [], followedId: null, ready,
     start, stop, statePayload, trackerPayload, refresh, audit, escapes, escapesSummary, recompute, backfill, retryLogin, petPhoto,
   });
 }

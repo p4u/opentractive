@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Store } from '../src/store.js';
 import { LiveState } from '../src/state.js';
-import { createMonitor, validateSettings, DEFAULT_SETTINGS, RULE_KINDS, liveDecision, inWindow, yardWatchStatus, flattenPaths } from '../src/monitor.js';
+import { createMonitor, validateSettings, DEFAULT_SETTINGS, RULE_KINDS, liveDecision, inWindow, yardWatchStatus, flattenPaths, withDefaults } from '../src/monitor.js';
 import { ll, square, asPair, fakeClock, TID, IDS } from './helpers.js';
 
 const YARD = { _id: IDS.yard, _type: 'geofence', _version: 'v1', name: 'Yard', shape: 'POLYGON', coords: square(20).map(asPair), radius: null, fence_type: 'SAFE', active: true, home_flag: true, icon: 'TRACTIVE' };
@@ -81,7 +81,7 @@ test('settings: defaults valid; unknown keys, ranges and cross-field rules rejec
   ok.pszCoversYard = { [IDS.pszIn]: false };
   assert.deepEqual(validateSettings(ok).settings, ok);
   assert.deepEqual([...RULE_KINDS].sort(), Object.keys(DEFAULT_SETTINGS.rules).sort());
-  assert.equal(RULE_KINDS.length, 14);
+  assert.equal(RULE_KINDS.length, 16);
 });
 
 test('yard: default is the active SAFE fence named Yard; an unknown selection turns the out rules off', async () => {
@@ -640,7 +640,7 @@ test('reclassify seeds the home state from the current position once the yard is
 const iso = (ms) => new Date(ms).toISOString();
 const opens = (h) => ev(h).filter((e) => e[1].incident === 1 && e[2] === 'open');
 
-test('F1: re-entering a home Wi-Fi zone without a position closes the incident; a later escape opens a new critical one', async () => {
+test('re-entering a home Wi-Fi zone without a position closes the incident; a later escape opens a new critical one', async () => {
   const h = setup();
   await wifi(h, PSZ_IN);
   status(h, { power_saving_zone_id: null, tracker_state_reason: null });
@@ -665,7 +665,7 @@ test('F1: re-entering a home Wi-Fi zone without a position closes the incident; 
   assert.ok(h.mon.status().chase);
 });
 
-test('F1: a zone flap left alone does not repeat for hours once the tracker is back in the zone', async () => {
+test('a zone flap left alone does not repeat for hours once the tracker is back in the zone', async () => {
   const h = setup();
   await wifi(h, PSZ_IN);
   status(h, { power_saving_zone_id: null, tracker_state_reason: null });
@@ -680,7 +680,7 @@ test('F1: a zone flap left alone does not repeat for hours once the tracker is b
   assert.equal(h.sent.filter((c) => c.name === 'pos_request').length, pr);
 });
 
-test('F1: new evidence after 10 quiet minutes re-alerts an acked incident and restarts its repeats', async () => {
+test('new evidence after 10 quiet minutes re-alerts an acked incident and restarts its repeats', async () => {
   const h = setup();
   h.mon.onTimelineEvents([]);
   h.clock.advance(5000);
@@ -700,7 +700,7 @@ test('F1: new evidence after 10 quiet minutes re-alerts an acked incident and re
   assert.equal(repeatsOf(h, inc.id), 1);
 });
 
-test('F2: a timeline fence exit read after the dog is back home opens nothing', async () => {
+test('a timeline fence exit read after the dog is back home opens nothing', async () => {
   const h = setup();
   h.mon.onTimelineEvents([]);
   await gps(h, 0, 0);
@@ -717,7 +717,7 @@ test('F2: a timeline fence exit read after the dog is back home opens nothing', 
   assert.equal(h.mon.status().chase, null);
 });
 
-test('F3: leaving the zone with a GPS fix inside the yard in the same status raises nothing; a status without fix still does', async () => {
+test('leaving the zone with a GPS fix inside the yard in the same status raises nothing; a status without fix still does', async () => {
   const h = setup();
   await wifi(h, PSZ_IN);
   h.clock.advance(3000);
@@ -737,7 +737,7 @@ test('F3: leaving the zone with a GPS fix inside the yard in the same status rai
   assert.equal(h.store.alert(inc.id).closed_by, 'home');
 });
 
-test('F4: GPS jitter at the fence opens at most one out_possible incident per dedupe period', async () => {
+test('GPS jitter at the fence opens at most one out_possible incident per dedupe period', async () => {
   const h = setup();
   await gps(h, 0, 0);
   for (let c = 0; c < 60; c++) { // one hour: 8 uncertain fixes 3 m out, then 12 fixes 2 m in, every 3 s
@@ -748,7 +748,7 @@ test('F4: GPS jitter at the fence opens at most one out_possible incident per de
   assert.equal(ev(h, 'chase').filter((e) => e[1].active).length, 6);
 });
 
-test('F4: the evidence list of an open incident keeps the last 50 items', async () => {
+test('the evidence list of an open incident keeps the last 50 items', async () => {
   const h = setup();
   h.mon.onTimelineEvents([]);
   for (let i = 0; i < 60; i++) {
@@ -761,7 +761,7 @@ test('F4: the evidence list of an open incident keeps the last 50 items', async 
   assert.equal(ids.at(-1), 'e59');
 });
 
-test('F7: the field detector learns silently for the first hour', () => {
+test('the field detector learns silently for the first hour', () => {
   const h = setup();
   assert.deepEqual(h.mon.detectFields('tracker', { _id: 'a', state: 'X' }), []);
   h.clock.advance(30 * 60_000);
@@ -823,7 +823,7 @@ test('left_psz by reason only when the reason clears to null and the tracker is 
   assert.equal(h.store.openIncident(TID).kind, 'left_psz');
 });
 
-test('S3: starting already in a home zone without an incident raises nothing, stores one zone row and arms escape detection', async () => {
+test('starting already in a home zone without an incident raises nothing, stores one zone row and arms escape detection', async () => {
   const store = new Store(':memory:'), clock = fakeClock();
   store.setRaw(`geofences:${TID}`, [YARD]);
   store.setRaw(`psz:${TID}`, [PSZ_IN, PSZ_OUT]);
@@ -840,4 +840,21 @@ test('S3: starting already in a home zone without an incident raises nothing, st
   await gps({ clock, live, mon }, 60, 0); // leaves the zone and is out at once
   assert.deepEqual(alerts, [['left_psz', 'open'], ['left_psz', 'update']]);
   assert.equal(store.escapes(TID, 0, clock.s()).length, 1); // needs the zone row as the last home observation
+});
+
+test('settings: stored settings from an older version get the new defaults; prototype keys are rejected and never merged', () => {
+  const old = structuredClone(DEFAULT_SETTINGS);
+  delete old.yardWatch.autoZones;
+  delete old.rules.zone_confirmed;
+  const merged = withDefaults(old);
+  assert.equal(merged.yardWatch.autoZones, false);
+  assert.deepEqual(merged.rules.zone_confirmed, { enabled: true, severity: 'info' });
+  assert.equal(validateSettings(merged).settings != null, true);
+  for (const key of ['constructor', 'toString', '__proto__']) {
+    const bad = JSON.parse(JSON.stringify(DEFAULT_SETTINGS).replace(/^\{/, `{"${key}":1,`));
+    assert.ok(validateSettings(bad).errors, `${key} must be rejected`);
+  }
+  const polluted = JSON.parse('{"__proto__":{"polluted":true}}');
+  withDefaults(polluted);
+  assert.equal({}.polluted, undefined);
 });

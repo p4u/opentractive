@@ -327,6 +327,11 @@ export function startServer({ store, app, config = {}, port = 8080, host = '127.
       await app.refresh('public_share');
       return [204, null];
     },
+    'POST /api/psz/:zid/switch': async ({ params: { zid }, body }) => {
+      if (typeof body.on !== 'boolean') fail(400, 'on must be true or false');
+      if (!(store.getRaw(`psz:${app.followedId}`) ?? []).some((x) => x._id === zid)) fail(404, 'unknown zone');
+      return [200, await app.zoneSwitch.switchZone(zid, body.on, 'web')];
+    },
     'DELETE /api/psz/:zid': async ({ params: { zid }, body }) => {
       const z = (store.getRaw(`psz:${app.followedId}`) ?? []).find((x) => x._id === zid) ?? fail(404, 'unknown zone');
       if (body.confirm !== z.name) fail(400, 'type the zone name to confirm');

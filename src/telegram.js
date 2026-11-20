@@ -10,7 +10,7 @@ const RANK = { info: 0, warn: 1, critical: 2 };
 const CHARGING = { CHARGING: 'charging', NOT_CHARGING: 'not charging', FULLY_CHARGED: 'fully charged' };
 const USAGE = {
   live: 'Usage: /live on|off', led: 'Usage: /led on|off', buzz: 'Usage: /buzz on|off', chase: 'Usage: /chase on|off',
-  watch: 'Usage: /watch on|off', walk: 'Usage: /walk [minutes] (1-720) or /walk off',
+  watch: 'Usage: /watch on|off', zone: 'Usage: /zone, /zone off|on or /zone off|on <name>', walk: 'Usage: /walk [minutes] (1-720) or /walk off',
   mute: 'Usage: /mute <minutes> (1-720) or /mute all <minutes>',
 };
 const HELP = [
@@ -23,6 +23,7 @@ const HELP = [
   '/buzz on|off - tracker buzzer',
   '/chase on|off - chase mode with a live location',
   '/watch on|off - yard watch',
+  '/zone - Wi-Fi zones; /zone off|on [name] switches them (off: GPS in the zone too)',
   '/walk [minutes]|off - walk mode (default 120 min)',
   '/mute <minutes> - mute info and warning alerts (1-720)',
   '/mute all <minutes> - mute every alert, critical included',
@@ -51,7 +52,7 @@ const minutes = (a) => (/^\d{1,3}$/.test(a ?? '') && +a >= 1 && +a <= 720 ? +a :
 const digest = (s) => crypto.createHash('sha256').update(String(s)).digest();
 
 export function createTelegram({
-  token, apiUrl = 'https://api.telegram.org', chatIds = [], store, monitor, live, trackerId, posRequestAllowed = () => true, petName = () => 'The dog',
+  token, apiUrl = 'https://api.telegram.org', chatIds = [], store, monitor, live, trackerId, posRequestAllowed = () => true, zoneSwitch = () => null, petName = () => 'The dog',
   escapesSummary = () => [], appUrl = '', now = Date.now, log = () => {}, pollTimeoutS = 50, minIntervalMs = 1000,
   backoffMinMs = 5000, backoffMaxMs = 60000, editEveryMs = 5000, botName: botNameOpt = null, callTimeoutMs = 15000,
 }) {
@@ -170,6 +171,23 @@ export function createTelegram({
     return ['Last escapes:', ...lines, ...(appUrl ? [`\n${appUrl}/#/escapes`] : [])].join('\n');
   }
 
+  async function zoneCommand([a, ...rest], actor) {
+    const zs = zoneSwitch();
+    if (!zs) return 'Wi-Fi zones are not available yet.';
+    const line = (z) => `${z.name}: ${z.off ? `off since ${hhmm(z.offAt)}${z.confirmedAt ? `, GPS confirmed at ${hhmm(z.confirmedAt)}` : ', waiting for the tracker to move'}` : 'on'}`;
+    const list = zs.status();
+    if (a === undefined) return list.length ? ['Wi-Fi zones:', ...list.map(line)].join('\n') : 'No Wi-Fi zones.';
+    const on = need(onOff(a), 'zone');
+    const name = rest.join(' ').trim().toLowerCase();
+    const covers = new Set(monitor.pszFlags().filter((f) => f.coversYard).map((f) => f.id));
+    const targets = name ? list.filter((z) => String(z.name ?? '').toLowerCase() === name)
+      : list.filter((z) => (on ? z.off : covers.has(z.id) && !z.off));
+    if (!targets.length) return name ? `No Wi-Fi zone named ${rest.join(' ')}.` : `Nothing to switch ${on ? 'on' : 'off'}.`;
+    const done = [];
+    for (const z of targets) done.push(await zs.switchZone(z.id, on, actor));
+    return [...done.filter(Boolean).map(line), on ? '' : 'The tracker applies it the next time it moves.'].filter(Boolean).join('\n');
+  }
+
   const need = (v, cmd) => { if (v == null) throw Object.assign(new Error(USAGE[cmd]), { usage: true }); return v; };
   const trackerCmd = (name, label) => async (chat, [a], actor) => {
     const on = need(onOff(a), label);
@@ -202,6 +220,7 @@ export function createTelegram({
       return all ? `Every alert muted for ${m} min.` : `Info and warning alerts muted for ${m} min. Critical alerts still come through.`;
     },
     unmute: (chat) => { store.updateChat(chat, { muted_until: null, mute_all: 0 }); return 'Alerts unmuted.'; },
+    zone: async (chat, args, actor) => zoneCommand(args, actor),
     escapes: () => escapesText(),
     help: () => HELP,
     start: () => HELP,

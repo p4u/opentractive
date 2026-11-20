@@ -137,7 +137,7 @@ function settingsBlock(el) {
         <div class="settings-grid">${toggle('chase.auto', draft, 'alerts.chase.auto', 'alerts.chase.auto.hint')}
           ${field('chase.maxHours', draft, 'alerts.chase.maxHours', 'alerts.chase.maxHours.hint')}${field('chase.minBattery', draft, 'alerts.chase.minBattery', 'alerts.chase.minBattery.hint')}</div></section>
       <section class="card"><div class="card-head"><h2 class="card-title">${esc(t('alerts.yw.title'))}</h2></div>
-        <div class="settings-grid">${toggle('yardWatch.enabled', draft, 'alerts.yw.enabled', 'alerts.yw.enabled.hint')}</div>
+        <div class="settings-grid">${toggle('yardWatch.enabled', draft, 'alerts.yw.enabled', 'alerts.yw.enabled.hint')}${toggle('yardWatch.autoZones', draft, 'alerts.yw.autoZones', 'alerts.yw.autoZones.hint', 'yw-auto-zones')}</div>
         <p class="subtitle">${esc(t('alerts.yw.windows'))}</p><p class="hint">${esc(t('alerts.yw.windows.hint'))}</p>
         <div data-windows></div><div data-err="yardWatch.windows"></div>
         <button type="button" class="pill pill-outline" data-add-window>${icon('plus', { size: 16 })}${esc(t('alerts.yw.add'))}</button>
@@ -213,7 +213,7 @@ export async function render(root, ctx) {
   root.innerHTML = `<header class="view-head"><h1 class="view-title">${esc(t('alerts.title'))}</h1></header>
     <section class="card" data-log></section><div data-settings></div>`;
   const kinds = ['out_possible', 'out_confirmed', 'left_psz', 'fence_exit', 'danger_enter', 'offline', 'live_failed', 'chase_low_battery', 'channel_down',
-    'battery_low', 'battery_critical', 'charging', 'back_home', 'new_field'];
+    'battery_low', 'battery_critical', 'charging', 'back_home', 'new_field', 'zone_confirmed', 'zone_failed'];
   const log = root.querySelector('[data-log]');
   const settings = root.querySelector('[data-settings]');
   await Promise.all([loadBlock(log, 320, logBlock(log, ctx, kinds)), loadBlock(settings, 900, settingsBlock(settings))]);

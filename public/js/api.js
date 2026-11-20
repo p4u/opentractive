@@ -45,6 +45,7 @@ export const notifyReachable = (tid) => post(`/api/tracker/${tid}/reachable-noti
 export const createShare = (tid, message) => post(`/api/tracker/${tid}/share`, { message });
 export const deleteShare = (sid) => del(`/api/share/${sid}`);
 export const deletePsz = (zid, confirm) => del(`/api/psz/${zid}`, { confirm });
+export const switchPsz = (zid, on) => post(`/api/psz/${zid}/switch`, { on });
 export const getGeofences = (tid, { refresh: r } = {}) => api(`/api/tracker/${tid}/geofences${q(refresh(r))}`);
 export const createGeofence = (tid, g) => post(`/api/tracker/${tid}/geofences`, g);
 export const updateGeofence = (gid, g) => put(`/api/geofences/${gid}`, g);

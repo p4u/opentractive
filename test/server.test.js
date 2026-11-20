@@ -32,7 +32,7 @@ const json = async (res) => ({ status: res.status, body: await res.json().catch(
 const ROUTES = [
   ['GET', '/api/state'], ['GET', '/api/stream'], ['POST', `/api/tracker/${TID}/command`], ['PUT', `/api/tracker/${TID}/power-mode`],
   ['PUT', `/api/tracker/${TID}/live-timeout`], ['GET', `/api/tracker/${TID}`], ['POST', `/api/tracker/${TID}/reachable-notification`],
-  ['POST', `/api/tracker/${TID}/share`], ['DELETE', `/api/share/${IDS.share}`], ['DELETE', `/api/psz/${IDS.pszIn}`],
+  ['POST', `/api/tracker/${TID}/share`], ['DELETE', `/api/share/${IDS.share}`], ['DELETE', `/api/psz/${IDS.pszIn}`], ['POST', `/api/psz/${IDS.pszIn}/switch`],
   ['GET', `/api/tracker/${TID}/geofences`], ['POST', `/api/tracker/${TID}/geofences`], ['PUT', `/api/geofences/${IDS.yard}`], ['DELETE', `/api/geofences/${IDS.yard}`],
   ['GET', '/api/positions'], ['GET', '/api/positions.gpx'], ['POST', '/api/positions/backfill'], ['GET', '/api/escapes'], ['POST', '/api/escapes/recompute'],
   ['PATCH', '/api/escapes/1'], ['GET', '/api/alerts'], ['POST', '/api/alerts/1/ack'], ['POST', '/api/alerts/1/false-alarm'], ['GET', '/api/settings'],
@@ -249,7 +249,7 @@ test('settings: GET defaults and flags, PUT validates and replaces', async (t) =
   const g = await json(await request('/api/settings'));
   assert.equal(g.body.settings.v, 1);
   assert.equal(g.body.pszFlags.length, 2);
-  assert.equal(g.body.ruleKinds.length, 14);
+  assert.equal(g.body.ruleKinds.length, 16);
   const s = structuredClone(g.body.settings);
   s.thresholds.batteryLow = 30;
   assert.equal((await request('/api/settings', { method: 'PUT', body: JSON.stringify(s) })).status, 200);
@@ -450,10 +450,30 @@ test('main exits without APP_PASSWORD or Tractive credentials, before creating a
   }
 });
 
-test('S8: a truncated recompute is reported as nothing changed, with a request for a shorter period', async () => {
+test('a truncated recompute is reported as nothing changed, with a request for a shorter period', async () => {
   const { recomputeText } = await import('../public/js/views/escapes.js');
   assert.equal(recomputeText({ inserted: 2, deleted: 1 }), 'Recomputed: 2 added, 1 removed');
   const msg = recomputeText({ inserted: 0, deleted: 0, truncated: true });
   assert.doesNotMatch(msg, /^Recomputed/);
   assert.match(msg, /shorter period/);
+});
+
+test('wi-fi zone switch: validated, foreign zones refused, off and on through the API, blind notice follows', async (t) => {
+  const { request, mock, app } = await setup(t);
+  const sw = (zid, body) => request(`/api/psz/${zid}/switch`, { method: 'POST', body });
+  assert.equal((await sw(IDS.pszIn, '{"on":"no"}')).status, 400);
+  assert.equal((await sw('5f1a000000000000000000ff', '{"on":false}')).status, 404);
+  const off = await json(await sw(IDS.pszIn, '{"on":false}'));
+  assert.equal(off.status, 200);
+  assert.equal(off.body.off, true);
+  const zone = async () => JSON.parse((await mock.get('/__mock/requests?host=graph')) && JSON.stringify((await app.tractive.powerSavingZone(IDS.pszIn))));
+  assert.match((await zone()).zone_id, /~ot-off$/);
+  const state = await json(await request('/api/state'));
+  assert.equal(state.body.zones.find((z) => z.id === IDS.pszIn).off, true);
+  assert.equal(state.body.psz.find((z) => z.id === IDS.pszIn).blinds, false);
+  const tr = await json(await request(`/api/tracker/${TID}`));
+  assert.equal(tr.body.psz.find((z) => z._id === IDS.pszIn).zone_id, 'a0:00:00:00:00:01'); // the real name, without the marker
+  const on = await json(await sw(IDS.pszIn, '{"on":true}'));
+  assert.equal(on.body.off, false);
+  assert.equal((await zone()).zone_id, 'a0:00:00:00:00:01');
 });

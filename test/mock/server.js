@@ -156,6 +156,10 @@ export async function startMock({ port = 0, host = '127.0.0.1', keepAliveMs = 10
     if (is('DELETE', /^geofence\/([^/]+)$/)) return S.geofences.delete(m[1]) ? [200, {}] : NOT_FOUND;
     if (is('GET', /^tracker\/[^/]+\/power_saving_zones$/)) return [200, [...S.zones.values()].map(stub)];
     if (is('GET', /^power_saving_zone\/([^/]+)$/)) return S.zones.has(m[1]) ? [200, S.zones.get(m[1])] : NOT_FOUND;
+    if (is('PUT', /^power_saving_zone\/([^/]+)$/)) {
+      const z = S.zones.get(m[1]);
+      return z ? versioned(z, q, () => Object.assign(z, { zone_id: body.zone_id, latlong: body.latlong ?? z.latlong, name: body.name ?? z.name, source: body.source ?? z.source }, { _id: z._id, _type: 'power_saving_zone' })) : NOT_FOUND;
+    }
     if (is('DELETE', /^power_saving_zone\/([^/]+)$/)) return S.zones.delete(m[1]) ? [200, {}] : NOT_FOUND;
     if (is('GET', /^tracker\/[^/]+\/command\/(live_tracking|led_control|buzzer_control|pos_request)\/(on|off)$/)) return command(m[1], m[2] === 'on');
     if (is('PUT', /^tracker\/[^/]+\/power_mode$/)) { S.tracker.power_mode = body.power_mode; return [200, restTracker()]; }

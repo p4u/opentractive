@@ -1,8 +1,8 @@
 import { register, t } from '../i18n.js';
 import dict from '../i18n/tracker.js';
-import { getTracker, setPowerMode, setLiveTimeout, deletePsz, createShare, deleteShare, notifyReachable, getNotifications, putNotifications } from '../api.js';
+import { getTracker, setPowerMode, setLiveTimeout, deletePsz, switchPsz, createShare, deleteShare, notifyReachable, getNotifications, putNotifications } from '../api.js';
 import { esc, icon, badge, ledger, emptyState, loadBlock, toast, apiErrorText, confirmDialog, overlay, fieldError } from '../ui.js';
-import { fmtDate } from '../format.js';
+import { fmtDate, fmtTime } from '../format.js';
 import { createMap, yardLayer, pszLayer } from '../map.js';
 
 register(dict);
@@ -49,7 +49,7 @@ function typedDialog(zone) {
 }
 
 export async function render(root, ctx) {
-  const { state, signal } = ctx;
+  const { state, signal, bus } = ctx;
   const tid = state.followed;
   root.innerHTML = `<header class="view-head"><h1 class="view-title">${esc(t('tracker.title'))}</h1>
     <button type="button" class="pill pill-outline" data-testid="tracker-refresh">${icon('refresh-cw', { size: 16 })}${esc(t('tracker.refresh'))}</button></header>
@@ -97,9 +97,20 @@ export async function render(root, ctx) {
       <div class="row"><div><p class="row-label">${esc(t('tracker.timeout'))}</p><p class="hint">${esc(t('tracker.timeout.hint'))}</p></div>
         ${seg('tracker-live-timeout', TIMEOUTS.map((s) => `<button type="button" data-s="${s}" aria-pressed="${tr.custom_lt_timeout === s}">${esc(t('tracker.timeout.value', { n: s / 60 }))}</button>`).join(''))}</div>
       <div data-controls-error></div>`;
+    const zoneStatus = (z) => {
+      const s = (state.zones ?? []).find((x) => x.id === z._id);
+      if (!z.off) return t('tracker.psz.on');
+      const since = s?.offAt ? fmtTime(s.offAt * 1000) : t('core.unknown');
+      return s?.confirmedAt
+        ? t('tracker.psz.confirmed', { since, at: fmtTime(s.confirmedAt * 1000), acc: Math.round(s.confirmedAcc ?? 0) })
+        : t('tracker.psz.waiting', { since });
+    };
     const pszRows = psz.map((z) => `<li class="psz" data-testid="psz-row" data-id="${esc(z._id)}">
         <div class="psz-info"><p class="row-label">${esc(z.name)}</p><p class="hint">${esc(t('tracker.psz.wifi'))}: <span class="num">${esc(z.zone_id)}</span></p>
-        <p>${z.current ? badge(t('tracker.psz.current'), 'ongoing') : ''} ${z.coversYard ? badge(t('tracker.psz.yard'), 'warn') : ''}</p>
+        <p>${z.current ? badge(t('tracker.psz.current'), 'ongoing') : ''} ${z.coversYard && !z.off ? badge(t('tracker.psz.yard'), 'warn') : ''} ${z.off ? badge(t('tracker.psz.offBadge'), 'ok') : ''}</p>
+        <p class="hint" data-testid="psz-status">${esc(zoneStatus(z))}</p>
+        ${w ? `<div class="row"><div><p class="row-label">${esc(t('tracker.psz.active'))}</p><p class="hint">${esc(t('tracker.psz.active.hint'))}</p></div>
+          <button type="button" class="pill pill-outline" aria-pressed="${z.off}" data-testid="psz-switch" data-on="${z.off ? '1' : '0'}">${esc(t(z.off ? 'tracker.psz.turnOn' : 'tracker.psz.turnOff'))}</button></div>` : ''}
         ${w ? `<button type="button" class="pill pill-outline" data-testid="psz-delete">${icon('trash-2', { size: 16 })}${esc(t('tracker.psz.delete'))}</button>` : ''}</div>
         <div class="map-sm" data-map></div></li>`).join('');
     const shareRows = shares.map((s) => `<li class="share" data-id="${esc(s._id)}"><div class="share-info"><p class="row-label">${esc(s.message)}</p>
@@ -203,6 +214,16 @@ export async function render(root, ctx) {
         toast(t('tracker.reach.done'));
         paint(main);
       } catch (err) { b.disabled = false; toast(apiErrorText(err)); }
+    } else if (b.dataset.testid === 'psz-switch') {
+      const id = b.closest('.psz').dataset.id;
+      const on = b.dataset.on === '1';
+      if (!on && !(await confirmDialog({ title: t('tracker.psz.offTitle'), body: t('tracker.psz.offBody'), yes: t('tracker.psz.turnOff'), no: t('tracker.cancel') }))) return;
+      b.disabled = true;
+      try {
+        await switchPsz(id, on);
+        toast(t(on ? 'tracker.psz.switchedOn' : 'tracker.psz.switchedOff'));
+        load(true);
+      } catch (err) { b.disabled = false; toast(apiErrorText(err)); }
     } else if (b.dataset.testid === 'psz-delete') {
       const z = data.psz.find((x) => x._id === b.closest('.psz').dataset.id);
       const typed = await typedDialog(z);
@@ -230,5 +251,12 @@ export async function render(root, ctx) {
   });
   root.querySelector('[data-testid="tracker-refresh"]').addEventListener('click', () => load(true));
   await load(false);
-  return dropMaps;
+  // a switch from Telegram or the automatic mode, or the GPS confirmation, repaints the zone rows
+  let zoneSig = JSON.stringify(state.zones ?? []);
+  const onState = () => {
+    const sig = JSON.stringify(state.zones ?? []);
+    if (sig !== zoneSig) { zoneSig = sig; load(false); }
+  };
+  bus?.addEventListener('state', onState);
+  return () => { bus?.removeEventListener('state', onState); dropMaps(); };
 }
