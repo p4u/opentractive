@@ -1,0 +1,38 @@
+/* Alerts view */
+.alert-filters { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-sm); }
+.alert-filters .field { min-width: 180px; }
+.alert-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.alert-row { display: grid; gap: var(--sp-xs); padding-block: var(--sp-sm); border-bottom: 1px solid var(--hairline); }
+.alert-row:last-child { border-bottom: 0; }
+.alert-row p { margin: 0; }
+.alert-row-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-xs); }
+.alert-row-head .icon { flex: none; }
+.alert-sev-critical .icon { color: var(--status-alarm); }
+.alert-sev-warn .icon { color: var(--status-warn); }
+.alert-badges, .alert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-xs); }
+.settings-form { display: flex; flex-direction: column; gap: var(--sp-lg); }
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-md); }
+.rule-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sp-xs) var(--sp-md); padding-block: var(--sp-sm); border-bottom: 1px solid var(--hairline); }
+.rule-row:last-child { border-bottom: 0; }
+.rule-row p { margin: 0; }
+.rule-row .rule-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-sm); }
+.rule-row select { width: auto; min-width: 120px; }
+.yw-window { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-sm); padding-block: var(--sp-sm); border-bottom: 1px solid var(--hairline); }
+.yw-days { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
+.yw-days label, .switch-row { display: inline-flex; align-items: center; gap: var(--sp-xxs); }
+.switch-row { gap: var(--sp-sm); }
+.settings-bar {
+  position: sticky;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--sp-sm));
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface-card);
+}
+.settings-summary { color: var(--ink); }
+@media (min-width: 640px) { .settings-bar { bottom: var(--sp-sm); } }

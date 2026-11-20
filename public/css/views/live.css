@@ -1,0 +1,13 @@
+/* Live view */
+.view-live .stack { display: flex; flex-direction: column; gap: var(--sp-base); min-width: 0; }
+.view-live .map-wrap { position: relative; }
+.view-live .map-centre { position: absolute; top: var(--sp-xs); right: 52px; z-index: 1000; background: var(--surface-card); }
+.view-live .control-label { margin: 0; font-weight: 500; color: var(--ink); }
+.view-live .control-row .hint { margin: 0; }
+.view-live .control-row + .control-row { border-top: 1px solid var(--hairline); }
+.view-live .control-row + .control-sub { border-top: 0; padding-top: 0; } /* part of the yard watch block above */
+.view-live .control-stack { grid-template-columns: 1fr; }
+.view-live .actions-row { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
+.view-live .walk-on .control-status { display: flex; align-items: center; gap: var(--sp-xs); color: var(--ink); }
+.view-live [data-main][hidden] { display: none; }
+@media (max-width: 1023px) { .view-live .split > .card { order: 3; } }

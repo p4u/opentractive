@@ -1,0 +1,20 @@
+/* Lab view */
+.view-lab .lab-body { margin-top: var(--sp-base); display: flex; flex-direction: column; gap: var(--sp-base); }
+.view-lab .stack { display: flex; flex-direction: column; gap: var(--sp-xs); }
+.view-lab .plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-xs); }
+.view-lab .raw { padding: var(--sp-sm) var(--sp-base); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface-card); }
+.view-lab .raw summary { cursor: pointer; color: var(--ink); overflow-wrap: anywhere; }
+.view-lab .json { max-height: 420px; margin: var(--sp-sm) 0; padding: var(--sp-sm); overflow: auto; border-radius: var(--r-md); background: var(--surface-strong); color: var(--ink); font-family: ui-monospace, monospace; font-size: var(--fs-caption); white-space: pre-wrap; overflow-wrap: anywhere; }
+.view-lab .lab-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-sm); }
+.view-lab .console { display: flex; flex-direction: column; gap: var(--sp-sm); align-items: flex-start; }
+.view-lab .console > .field, .view-lab .console-row { align-self: stretch; }
+.view-lab .console-row { display: grid; grid-template-columns: 140px 140px minmax(0, 1fr); gap: var(--sp-sm); }
+.view-lab .check { display: flex; gap: var(--sp-xs); align-items: center; }
+.view-lab textarea { font-family: ui-monospace, monospace; }
+.view-lab .kv { margin: 0; }
+.view-lab .kv-row { display: flex; justify-content: space-between; gap: var(--sp-base); padding: var(--sp-xs) 0; border-bottom: 1px solid var(--hairline); }
+.view-lab .kv-row dd { margin: 0; color: var(--ink); text-align: right; }
+.view-lab .table td code { overflow-wrap: anywhere; }
+@media (max-width: 639px) {
+  .view-lab .console-row { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,0 +1,51 @@
+/* Login page: the editorial 96 px rhythm (kept here only), two orbs behind the headline, one ink pill. */
+.login-page {
+  display: grid;
+  place-items: start center;
+  padding-inline: var(--gutter);
+}
+.login {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 440px;
+  padding-block: var(--sp-section);
+}
+.login-orb-a { width: 520px; top: var(--sp-xl); left: -280px; }
+.login-orb-b { width: 440px; top: 160px; right: -260px; }
+
+.login-mark {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.login-mark .icon { color: var(--chart-sun); }
+.login .headline { margin-top: var(--sp-xxl); }
+.login-lead { margin-top: var(--sp-sm); color: var(--body); }
+.login-card { display: flex; flex-direction: column; gap: var(--sp-lg); margin-top: var(--sp-xl); }
+
+.login-lang {
+  position: fixed;
+  top: var(--sp-base);
+  right: var(--sp-base);
+  z-index: 1;
+  width: auto;
+  gap: var(--sp-xs);
+  padding: 0 14px 0 var(--sp-sm);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 639px) {
+  .login { padding-block: 72px var(--sp-xxl); }
+  .login .headline { margin-top: var(--sp-xl); }
+  .login-orb-a { width: 400px; left: -220px; }
+  .login-orb-b { width: 360px; right: -220px; }
+}
+.offline-actions { margin-top: var(--sp-xl); }

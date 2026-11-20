@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)">
+  <title>OpenTractive</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/vendor/geoman/leaflet-geoman.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/views/live.css">
+  <link rel="stylesheet" href="/css/views/history.css">
+  <link rel="stylesheet" href="/css/views/escapes.css">
+  <link rel="stylesheet" href="/css/views/fences.css">
+  <link rel="stylesheet" href="/css/views/alerts.css">
+  <link rel="stylesheet" href="/css/views/tracker.css">
+  <link rel="stylesheet" href="/css/views/pet.css">
+  <link rel="stylesheet" href="/css/views/telegram.css">
+  <link rel="stylesheet" href="/css/views/lab.css">
+  <script src="/js/theme.js"></script>
+  <script src="/vendor/leaflet/leaflet.js" defer></script>
+  <script src="/vendor/geoman/leaflet-geoman.js" defer></script>
+  <script src="/vendor/apexcharts.js" defer></script>
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="core.skip">Skip to content</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/" id="brand"><svg class="icon icon-20 brand-mark" aria-hidden="true"><use href="/icons.svg#dog"/></svg><span class="brand-name" data-i18n="core.appName">OpenTractive</span></a>
+
+      <nav class="nav-links" data-i18n-aria="core.nav.label">
+        <a href="#/" data-route="live" data-i18n="core.nav.live">Live</a>
+        <a href="#/history" data-route="history" data-i18n="core.nav.history">History</a>
+        <a href="#/escapes" data-route="escapes" data-i18n="core.nav.escapes">Escapes</a>
+        <a href="#/fences" data-route="fences" data-i18n="core.nav.fences">Fences</a>
+        <a href="#/alerts" data-route="alerts" data-i18n="core.nav.alerts">Alerts</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="icon-btn nav-wide" href="#/tracker" data-route="tracker" data-i18n-aria="core.nav.tracker" data-i18n-title="core.nav.tracker">
+          <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#cpu"/></svg>
+        </a>
+        <a class="icon-btn nav-wide" href="#/pet" data-route="pet" data-i18n-aria="core.nav.pet" data-i18n-title="core.nav.pet">
+          <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#paw-print"/></svg>
+        </a>
+        <a class="icon-btn nav-wide" href="#/telegram" data-route="telegram" data-i18n-aria="core.nav.telegram" data-i18n-title="core.nav.telegram">
+          <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#send"/></svg>
+        </a>
+        <a class="icon-btn nav-wide" href="#/lab" data-route="lab" data-i18n-aria="core.nav.lab" data-i18n-title="core.nav.lab">
+          <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#flask-conical"/></svg>
+        </a>
+        <button type="button" class="icon-btn" data-action="theme">
+          <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#moon"/></svg>
+        </button>
+        <button type="button" class="icon-btn nav-wide" data-action="logout" data-i18n-aria="core.logout" data-i18n-title="core.logout">
+          <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#log-out"/></svg>
+        </button>
+      </div>
+
+      <button type="button" class="icon-btn more-btn" popovertarget="more-menu" data-i18n-aria="core.nav.more" data-i18n-title="core.nav.more">
+        <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#ellipsis"/></svg>
+      </button>
+      <div class="menu" id="more-menu" popover>
+        <a class="menu-item" href="#/tracker" data-route="tracker"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#cpu"/></svg><span data-i18n="core.nav.tracker">Tracker</span></a>
+        <a class="menu-item" href="#/pet" data-route="pet"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#paw-print"/></svg><span data-i18n="core.nav.pet">Pet</span></a>
+        <a class="menu-item" href="#/telegram" data-route="telegram"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#send"/></svg><span data-i18n="core.nav.telegram">Telegram</span></a>
+        <a class="menu-item" href="#/lab" data-route="lab"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#flask-conical"/></svg><span data-i18n="core.nav.lab">Lab</span></a>
+        <hr class="menu-rule">
+        <button type="button" class="menu-item" data-action="theme"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#moon"/></svg><span class="action-label"></span></button>
+        <button type="button" class="menu-item" data-action="logout"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#log-out"/></svg><span data-i18n="core.logout">Log out</span></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="alert-banner" id="alert-banner" role="alert" data-testid="alert-banner" hidden>
+    <svg class="icon icon-24" aria-hidden="true"><use href="/icons.svg#siren"/></svg>
+    <div><p class="alert-banner-title"></p><p class="alert-banner-body hint"></p></div>
+    <button type="button" class="pill pill-primary" data-action="banner-ack" data-i18n="core.banner.ack">Got it</button>
+    <button type="button" class="pill pill-outline" data-action="banner-false" data-i18n="core.banner.falseAlarm">False alarm</button>
+    <a class="pill pill-outline" href="#/" data-i18n="core.banner.open">Open Live</a>
+  </div>
+
+  <main id="main" class="container" tabindex="-1"></main>
+
+  <nav class="tabbar" data-i18n-aria="core.nav.label">
+    <a class="tab" href="#/" data-route="live"><span class="tab-icon"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#map-pin"/></svg></span><span class="tab-label" data-i18n="core.nav.live">Live</span></a>
+    <a class="tab" href="#/history" data-route="history"><span class="tab-icon"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#history"/></svg></span><span class="tab-label" data-i18n="core.nav.history">History</span></a>
+    <a class="tab" href="#/escapes" data-route="escapes"><span class="tab-icon"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#fence"/></svg></span><span class="tab-label" data-i18n="core.nav.escapes">Escapes</span></a>
+    <a class="tab" href="#/alerts" data-route="alerts"><span class="tab-icon"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#bell"/></svg></span><span class="tab-label" data-i18n="core.nav.alerts">Alerts</span></a>
+    <button type="button" class="tab" data-action="sheet" aria-haspopup="dialog"><span class="tab-icon"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#ellipsis"/></svg></span><span class="tab-label" data-i18n="core.nav.more">More</span></button>
+  </nav>
+
+  <dialog class="sheet" id="more-sheet" data-i18n-aria="core.nav.more">
+    <span class="sheet-handle" aria-hidden="true"></span>
+    <nav class="sheet-list" data-i18n-aria="core.nav.more">
+      <a class="menu-item" href="#/fences" data-route="fences"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#fence"/></svg><span data-i18n="core.nav.fences">Fences</span></a>
+      <a class="menu-item" href="#/tracker" data-route="tracker"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#cpu"/></svg><span data-i18n="core.nav.tracker">Tracker</span></a>
+      <a class="menu-item" href="#/pet" data-route="pet"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#paw-print"/></svg><span data-i18n="core.nav.pet">Pet</span></a>
+      <a class="menu-item" href="#/telegram" data-route="telegram"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#send"/></svg><span data-i18n="core.nav.telegram">Telegram</span></a>
+      <a class="menu-item" href="#/lab" data-route="lab"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#flask-conical"/></svg><span data-i18n="core.nav.lab">Lab</span></a>
+      <hr class="menu-rule">
+      <button type="button" class="menu-item" data-action="theme"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#moon"/></svg><span class="action-label"></span></button>
+      <button type="button" class="menu-item" data-action="logout"><svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#log-out"/></svg><span data-i18n="core.logout">Log out</span></button>
+    </nav>
+    <button type="button" class="pill pill-outline sheet-close" data-action="close-sheet" data-i18n="core.close">Close</button>
+  </dialog>
+</body>
+</html>

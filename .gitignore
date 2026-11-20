@@ -1,0 +1,9 @@
+details.txt
+.env
+data/
+node_modules/
+.delivery/
+test-results/
+playwright-report/
+.claude/
+.playwright-mcp/

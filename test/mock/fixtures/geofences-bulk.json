@@ -1,0 +1,1 @@
+[{"shape":"POLYGON","coords":[[40.99982,1.999762],[40.99982,2.000238],[41.00018,2.000238],[41.00018,1.999762]],"radius":28.3,"trigger":["IN_TO_OUT","OUT_TO_IN"],"active":true,"home_flag":true,"deleted_at":null,"name":"Yard","icon":"TRACTIVE","fence_type":"SAFE","entered_at":1789990000,"_id":"5f1a00000000000000000010","_type":"geofence","_version":"1"}]

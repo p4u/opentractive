@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test';
+import { login, sawGraph, TID } from './helpers.js';
+
+test('Live shows the mock state and every control reaches the mock', async ({ page, request }) => {
+  await login(page);
+  await expect(page.locator('main h1')).toHaveText('Live');
+  await expect(page.getByTestId('status-line')).toContainText('In the yard');
+  await expect(page.getByTestId('live-ledger')).toContainText('80 %');
+  await expect(page.getByTestId('live-map')).toBeVisible();
+  const since = Date.now();
+  await page.getByTestId('led-toggle').check();
+  await sawGraph(request, since, 'GET', `/tracker/${TID}/command/led_control/on`);
+  await page.getByTestId('led-toggle').uncheck();
+  await sawGraph(request, since, 'GET', '/command/led_control/off');
+  await page.getByTestId('buzzer-toggle').check();
+  await page.locator('dialog [data-yes]').click();
+  await sawGraph(request, since, 'GET', '/command/buzzer_control/on');
+  await page.getByTestId('buzzer-toggle').uncheck();
+  await sawGraph(request, since, 'GET', '/command/buzzer_control/off');
+  await page.getByTestId('locate-btn').click();
+  await sawGraph(request, since, 'GET', '/command/pos_request/on');
+  await page.getByTestId('live-toggle').check();
+  await sawGraph(request, since, 'GET', '/command/live_tracking/on');
+  await expect(page.getByTestId('live-status')).toContainText('left', { timeout: 10_000 });
+  await page.getByTestId('live-toggle').uncheck();
+  await sawGraph(request, since, 'GET', '/command/live_tracking/off');
+  await page.getByTestId('power-mode').getByRole('button', { name: 'Precision' }).click();
+  await sawGraph(request, since, 'PUT', `/tracker/${TID}/power_mode`, { power_mode: 'PRECISION' });
+  await page.getByTestId('live-timeout').selectOption('1800');
+  await sawGraph(request, since, 'PUT', `/tracker/${TID}/lt_timeout`, { timeout: 1800 });
+  await page.getByTestId('walk-60').click();
+  await expect(page.getByTestId('walk-status')).toContainText('Walk mode until');
+  await page.getByTestId('walk-end').click();
+  await expect(page.getByTestId('walk-status')).toBeHidden();
+  await expect(page.getByTestId('psz-advice')).toContainText('Kitchen');
+});

@@ -1,0 +1,8 @@
+/* History view */
+.view-history .range-bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-xs) var(--sp-base); }
+.view-history .range-custom { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-xs); }
+.view-history .playback { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-xs) var(--sp-base); }
+.view-history .playback input[type="range"] { flex: 1 1 200px; min-width: 0; accent-color: var(--primary); }
+.view-history .play-label { font-size: var(--fs-caption); color: var(--muted); min-width: 6ch; }
+.view-history .actions-row { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
+.view-history .stack { display: flex; flex-direction: column; gap: var(--sp-base); }

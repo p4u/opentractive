@@ -1,0 +1,15 @@
+/* Telegram view */
+.view-telegram .grid { row-gap: var(--sp-base); }
+.view-telegram .plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-base); }
+.view-telegram .code { margin: var(--sp-base) 0 var(--sp-xs); font-size: var(--fs-display-sm); letter-spacing: 0.2em; color: var(--ink); font-weight: 500; }
+.view-telegram .steps { margin: var(--sp-sm) 0 0; padding-left: var(--sp-lg); }
+.view-telegram .chat { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: var(--sp-sm); align-items: end; padding-bottom: var(--sp-base); border-bottom: 1px solid var(--hairline); }
+.view-telegram .chat-name { margin: 0; color: var(--ink); font-weight: 500; }
+.view-telegram .chat .hint { margin: 0; overflow-wrap: anywhere; }
+.view-telegram .cmds { margin: 0; display: grid; gap: var(--sp-xs); }
+.view-telegram .cmds > div { display: flex; flex-wrap: wrap; gap: var(--sp-xs) var(--sp-base); }
+.view-telegram .cmds dt { min-width: 180px; }
+.view-telegram .cmds dd { margin: 0; color: var(--muted); }
+@media (max-width: 639px) {
+  .view-telegram .chat { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+}

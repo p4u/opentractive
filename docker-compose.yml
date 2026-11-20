@@ -1,0 +1,72 @@
+services:
+  opentractive:
+    build: { context: ., target: runtime }
+    image: opentractive:latest
+    restart: unless-stopped
+    env_file:
+      - path: .env               # credentials and settings, see .env.example
+        required: false
+    volumes:
+      - ./data:/app/data         # SQLite DB, token cache, photo cache; owned by uid 1000 (node)
+    ports:
+      # localhost only by default (OT_BIND, OT_PORT); expose it only behind a TLS reverse proxy
+      - "${OT_BIND:-127.0.0.1}:${OT_PORT:-8090}:8080"
+
+  unit:
+    profiles: [test]
+    build: { context: ., target: test }
+    network_mode: none
+    command: ["npm", "test"]
+
+  mock:
+    profiles: [e2e]
+    build: { context: ., target: test }
+    command: ["node", "test/mock/server.js"]
+    environment:
+      MOCK_PORT: "9000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9000/__mock/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  app-e2e:
+    profiles: [e2e]
+    build: { context: ., target: runtime }
+    environment:
+      APP_PASSWORD: e2e-password-123
+      TRACTIVE_EMAIL: e2e@example.com
+      TRACTIVE_PASSWORD: e2e-tractive-pw
+      TRACTIVE_GRAPH_URL: http://mock:9000/graph/4
+      TRACTIVE_CHANNEL_URL: http://mock:9000/channel/3/channel
+      TRACTIVE_APS_URL: http://mock:9000/aps/api/1
+      TRACTIVE_TIMELINE_URL: http://mock:9000/timeline/api/1
+      TRACTIVE_MIN_GAP_MS: "50"
+      TELEGRAM_BOT_TOKEN: "123456:TEST-TOKEN-abc"
+      TELEGRAM_API_URL: http://mock:9000/telegram
+      TELEGRAM_CHAT_IDS: "1001"
+      APP_URL: http://app-e2e:8080
+      TZ: Europe/Madrid
+    tmpfs:
+      - /app/data:uid=1000,gid=1000,mode=0700
+    depends_on:
+      mock: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  playwright:
+    profiles: [e2e]
+    build: { context: ., target: e2e }
+    environment:
+      E2E_BASE_URL: http://app-e2e:8080
+      E2E_MOCK_URL: http://mock:9000
+      E2E_PASSWORD: e2e-password-123
+    volumes:
+      - ./e2e:/app/e2e:ro
+      - ./playwright.config.js:/app/playwright.config.js:ro
+      - ./test-results:/app/test-results
+    depends_on:
+      app-e2e: { condition: service_healthy }

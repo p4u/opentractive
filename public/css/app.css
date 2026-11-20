@@ -1,0 +1,135 @@
+/* Shared additions for OpenTractive (tokens only; map colours come from --map-* tokens). */
+.alert-banner {
+  position: sticky;
+  top: var(--top-h);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--gutter-x);
+  border-left: 4px solid var(--status-alarm);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-card);
+  color: var(--ink);
+}
+.alert-banner[hidden] { display: none; }
+.alert-banner > div { flex: 1 1 200px; min-width: 0; }
+.alert-banner p { margin: 0; }
+.alert-banner-title { font-weight: 600; }
+.alert-banner .icon { color: var(--status-alarm); flex: none; }
+
+/* empty slots (a login or empty-state placeholder) take no flex gap: no hole under the view title */
+.view > :empty { display: none; }
+
+/* compact warning card in the flow: body type, icon plus words */
+.notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sp-sm);
+  align-items: start;
+  padding: var(--sp-sm) var(--sp-base);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface-card);
+  color: var(--body);
+}
+.notice p { margin: 0; max-width: 65ch; }
+.notice > .icon { margin-top: 2px; color: var(--muted); }
+.notice-warn > .icon { color: var(--status-warn); }
+.notice-alarm > .icon { color: var(--status-alarm); }
+
+/* Leaflet's panes and controls use z-index up to 1000: keep them inside the map, under the sticky header and banner */
+.map, .map-sm, .map-wrap { isolation: isolate; }
+.map {
+  height: 60vh;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.map-sm { height: 220px; border-radius: var(--r-lg); overflow: hidden; }
+@media (min-width: 640px) { .map { height: 560px; } }
+
+.dog-marker {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--map-dog);
+  border: 3px solid var(--map-halo);
+  transition: transform 300ms var(--ease);
+}
+.dog-marker.has-heading::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  translate: -50% 0;
+  border: 5px solid transparent;
+  border-bottom: 7px solid var(--map-dog);
+  border-top: 0;
+  transform: rotate(var(--heading, 0deg));
+  transform-origin: 50% 14px;
+}
+.psz-label {
+  padding: 2px var(--sp-xs);
+  border: 1px solid var(--map-psz);
+  border-radius: var(--r-pill);
+  background: var(--surface-card);
+  color: var(--ink);
+  font-size: var(--fs-caption);
+}
+.peak-marker {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--map-danger);
+  border: 2px solid var(--map-halo);
+  color: var(--map-halo);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--sp-xs) var(--sp-base);
+  min-height: 44px;
+  padding: var(--sp-xs) 0;
+}
+.control-row > .control-status { grid-column: 1 / -1; }
+.control-status { font-size: var(--fs-caption); color: var(--muted); margin: 0; }
+
+.split { display: grid; gap: var(--sp-base); }
+@media (min-width: 1024px) { .split { grid-template-columns: 2fr 1fr; } }
+
+/* Leaflet controls, popups and tooltips on the theme's surfaces (leaflet.css paints them white) */
+.leaflet-bar a, .leaflet-control-layers, .leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-tooltip {
+  background-color: var(--surface-card);
+  color: var(--ink);
+}
+.leaflet-bar a { border-bottom-color: var(--hairline); }
+.leaflet-bar a:hover, .leaflet-bar a:focus { background-color: var(--surface-strong); color: var(--ink); }
+.leaflet-bar a.leaflet-disabled { background-color: var(--surface-strong); color: var(--muted); }
+.leaflet-touch .leaflet-bar, .leaflet-touch .leaflet-control-layers, .leaflet-tooltip { border-color: var(--hairline-strong); }
+.leaflet-control-layers-expanded { color: var(--body); }
+.leaflet-container .leaflet-control-attribution { background: var(--surface-card); color: var(--muted); }
+.leaflet-container .leaflet-control-attribution a { color: var(--body); }
+.leaflet-tooltip-top::before { border-top-color: var(--hairline-strong); }
+.leaflet-tooltip-bottom::before { border-bottom-color: var(--hairline-strong); }
+.leaflet-tooltip-left::before { border-left-color: var(--hairline-strong); }
+.leaflet-tooltip-right::before { border-right-color: var(--hairline-strong); }
+
+.json {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 480px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dog-marker, .dog-marker::after { transition: none; }
+}

@@ -1,0 +1,21 @@
+/* Escapes view */
+.escapes-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-sm); }
+.escapes-bar .hint { flex: 1 1 240px; margin: 0; }
+.peak-list { display: flex; flex-direction: column; gap: var(--sp-xs); margin: 0; padding: 0; list-style: none; }
+.peak-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-sm); }
+.escape-row { cursor: pointer; }
+.escape-row.muted { opacity: 0.6; }
+.escape-row input[type="text"] { min-width: 160px; }
+.escape-q { display: inline-flex; align-items: center; gap: var(--sp-xxs); }
+.escape-time { white-space: nowrap; }
+/* under 640 px each episode is a card: every field visible, each with its column name */
+@media (max-width: 639px) {
+  [data-testid="escapes-table"] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  [data-testid="escapes-table"], [data-testid="escapes-table"] tbody { display: block; }
+  .escape-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-sm) var(--sp-base); padding-block: var(--sp-base); border-bottom: 1px solid var(--hairline); }
+  .escape-row:last-child { border-bottom: 0; }
+  .escape-row td { display: block; padding: 0; border: 0; }
+  .escape-row td::before { content: attr(data-label); display: block; margin-bottom: var(--sp-xxs); color: var(--muted); font-size: var(--fs-caption); }
+  .escape-row .escape-note { grid-column: 1 / -1; }
+  .escape-row input[type="text"] { width: 100%; min-width: 0; }
+}

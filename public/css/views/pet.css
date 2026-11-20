@@ -1,0 +1,26 @@
+/* Pet view */
+.view-pet .grid { row-gap: var(--sp-base); }
+.view-pet .plain, .view-pet .legend { list-style: none; margin: 0; padding: 0; }
+.view-pet .profile { display: flex; gap: var(--sp-base); align-items: flex-start; flex-wrap: wrap; }
+.view-pet .photo-box { display: grid; place-items: center; width: 96px; height: 96px; border-radius: var(--r-xl); background: var(--surface-strong); overflow: hidden; color: var(--muted); }
+.view-pet .pet-photo { width: 100%; height: 100%; object-fit: cover; }
+.view-pet .kv { margin: 0; flex: 1 1 240px; }
+.view-pet .kv-row { display: flex; justify-content: space-between; gap: var(--sp-base); padding: var(--sp-xs) 0; border-bottom: 1px solid var(--hairline); }
+.view-pet .kv-row dt { color: var(--muted); }
+.view-pet .kv-row dd { margin: 0; color: var(--ink); text-align: right; overflow-wrap: anywhere; }
+.view-pet .pet-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-sm); margin-top: var(--sp-base); }
+.view-pet .pet-form .actions-inline, .view-pet .pet-form [data-error] { grid-column: 1 / -1; }
+.view-pet .actions-inline { display: flex; gap: var(--sp-xs); }
+.view-pet .subtitle { margin: var(--sp-base) 0 var(--sp-xs); }
+.view-pet .bar { width: 100%; height: 10px; accent-color: var(--primary); }
+.view-pet .stack { display: flex; height: 16px; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-strong); }
+.view-pet .seg-REST { background: var(--chart-battery); }
+.view-pet .seg-OFF_PET { background: var(--muted-soft); }
+.view-pet .seg-other { background: var(--chart-ac); }
+.view-pet .legend { display: flex; flex-wrap: wrap; gap: var(--sp-base); margin-top: var(--sp-xs); font-size: var(--fs-caption); }
+.view-pet .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; }
+.view-pet .timeline-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-xs); padding: var(--sp-xs) 0; border-bottom: 1px solid var(--hairline); }
+.view-pet .timeline + .pill { margin-top: var(--sp-sm); }
+@media (max-width: 639px) {
+  .view-pet .kv { flex-basis: 100%; }
+}

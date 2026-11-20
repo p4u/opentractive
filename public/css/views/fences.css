@@ -1,0 +1,14 @@
+/* Fences view */
+.fence-draw { margin-bottom: var(--sp-sm); display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-xs); }
+.fence-draw .hint { flex: 1 1 100%; margin: 0; }
+.fence-form { display: flex; flex-direction: column; gap: var(--sp-sm); }
+.fence-form .actions, .fence-actions { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
+.fence-list { display: flex; flex-direction: column; gap: var(--sp-md); margin: 0; padding: 0; list-style: none; }
+.fence-row { display: grid; gap: var(--sp-sm); padding-bottom: var(--sp-md); border-bottom: 1px solid var(--hairline); }
+.fence-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.fence-row .fence-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-sm); }
+.view-fences label.inline { display: inline-flex; align-items: center; gap: var(--sp-xs); min-height: 44px; color: var(--ink); }
+.view-fences input[type="radio"] { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--primary); }
+.fence-auto { display: grid; gap: var(--sp-xxs); margin-top: var(--sp-md); padding-top: var(--sp-sm); border-top: 1px solid var(--hairline); }
+.fence-auto .hint { margin: 0; }
+.fence-row .fence-name { margin: 0; }

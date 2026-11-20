@@ -1,0 +1,40 @@
+import { test, expect } from '@playwright/test';
+import { login, graphCalls, TID, IDS } from './helpers.js';
+
+test('fences: draw a polygon, rename it, use it as the yard and back, delete it', async ({ page, request }) => {
+  await login(page);
+  await expect(page.locator('#main h1')).toBeVisible(); // login() can return on the login page itself; wait for the shell
+  await page.goto('/#/fences');
+  await expect(page.locator('main h1')).toHaveText('Fences');
+  const map = page.getByTestId('fences-map');
+  await expect(map).toBeVisible();
+  await expect(page.getByTestId('fence-row')).toHaveCount(1);
+  const box = await map.boundingBox();
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.getByTestId('draw-polygon').click();
+  for (const [dx, dy] of [[-80, -60], [80, -60], [80, 60], [-80, 60], [-80, -60]]) await page.mouse.click(cx + dx, cy + dy);
+  await expect(page.getByTestId('fence-form')).toBeVisible();
+  await page.getByTestId('fence-name').fill('Test fence');
+  const since = Date.now();
+  await page.getByTestId('fence-save').click();
+  const row = page.getByTestId('fence-row').filter({ hasText: 'Test fence' });
+  await expect(row).toBeVisible();
+  const created = (await graphCalls(request, since)).find((r) => r.method === 'POST' && r.path === `/graph/4/geofence/tracker/${TID}/geofences`);
+  expect(created.body.shape).toBe('POLYGON');
+  expect(created.body.coords).toHaveLength(4);
+  expect(Math.abs(created.body.coords[0][0] - 41)).toBeLessThan(0.01);
+  expect(Math.abs(created.body.coords[0][1] - 2)).toBeLessThan(0.01);
+  await row.getByTestId('fence-rename').fill('Test fence 2');
+  await row.getByTestId('fence-rename').press('Enter');
+  await expect.poll(async () => (await graphCalls(request, since)).some((r) => r.method === 'PUT' && /\/graph\/4\/geofence\/[a-f0-9]{24}\?_version=/.test(r.path) && r.body.name === 'Test fence 2')).toBe(true);
+  const row2 = page.getByTestId('fence-row').filter({ hasText: 'Test fence 2' });
+  await row2.getByTestId('fence-yard').check();
+  await expect.poll(async () => (await (await page.request.get('/api/settings')).json()).settings.yardGeofenceId).not.toBe(IDS.yard);
+  await page.locator(`[data-testid="fence-row"][data-id="${IDS.yard}"]`).getByTestId('fence-yard').check();
+  await expect.poll(async () => (await (await page.request.get('/api/settings')).json()).settings.yardGeofenceId).toBe(IDS.yard);
+  await row2.getByTestId('fence-delete').click();
+  await page.locator('dialog [data-yes]').click();
+  await expect.poll(async () => (await graphCalls(request, since)).some((r) => r.method === 'DELETE' && /^\/graph\/4\/geofence\/[a-f0-9]{24}$/.test(r.path))).toBe(true);
+  await expect(page.getByTestId('fence-row')).toHaveCount(1);
+});

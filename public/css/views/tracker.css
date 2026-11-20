@@ -1,0 +1,21 @@
+/* Tracker view */
+.view-tracker .grid { row-gap: var(--sp-base); }
+.view-tracker .plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-sm); }
+.view-tracker .row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-sm); padding: var(--sp-sm) 0; border-bottom: 1px solid var(--hairline); }
+.view-tracker .row-label { color: var(--ink); font-weight: 500; margin: 0; }
+.view-tracker .psz { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-base); align-items: start; }
+.view-tracker .psz-info { display: flex; flex-direction: column; gap: var(--sp-xs); align-items: flex-start; }
+.view-tracker .map-sm { height: 160px; border-radius: var(--r-md); overflow: hidden; background: var(--surface-strong); }
+.view-tracker .share { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-sm); }
+.view-tracker .share-info { min-width: 0; overflow-wrap: anywhere; }
+.view-tracker .actions-inline { display: flex; flex-wrap: wrap; gap: var(--sp-xs); align-items: flex-start; }
+.view-tracker .share-form { display: flex; flex-direction: column; gap: var(--sp-sm); align-items: flex-start; margin-top: var(--sp-base); }
+.view-tracker .share-form .field { align-self: stretch; }
+.view-tracker .table th, .view-tracker .table td { text-align: left; }
+.view-tracker .card .hint { margin-top: var(--sp-sm); }
+@media (max-width: 639px) {
+  .view-tracker .psz { grid-template-columns: minmax(0, 1fr); }
+}
+.view-tracker .badge { white-space: normal; max-width: 100%; }
+.view-tracker .caps { gap: var(--sp-xs); color: var(--ink); }
+.view-tracker .pill { white-space: normal; height: auto; min-height: 44px; text-align: left; }

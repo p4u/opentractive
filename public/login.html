@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)">
+  <title data-i18n="core.login.title">Log in</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/login.css">
+  <script src="/js/theme.js"></script>
+  <script type="module" src="/js/login.js"></script>
+</head>
+<body class="login-page">
+  <main class="login">
+    <span class="orb orb-mint login-orb-a" aria-hidden="true"></span>
+    <span class="orb orb-lavender login-orb-b" aria-hidden="true"></span>
+
+    <p class="login-mark">
+      <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#dog"/></svg>
+      <span data-i18n="core.appName">OpenTractive</span>
+    </p>
+    <h1 class="headline" data-i18n="core.login.heading">Know where the dog is</h1>
+    <p class="login-lead" data-i18n="core.login.lead">Enter the app password to continue.</p>
+
+    <form id="login" class="card login-card" novalidate>
+      <div class="field">
+        <label for="password" data-i18n="core.login.password">Password</label>
+        <div class="field-affix">
+          <input id="password" name="password" type="password" autocomplete="current-password" required autofocus aria-describedby="login-error">
+          <button type="button" class="icon-btn field-affix-btn" id="reveal" aria-controls="password" data-i18n-aria="core.login.show" data-i18n-title="core.login.show">
+            <svg class="icon icon-20" aria-hidden="true"><use href="/icons.svg#eye"/></svg>
+          </button>
+        </div>
+        <p id="login-error" class="field-error" role="alert"><svg class="icon icon-16" aria-hidden="true"><use href="/icons.svg#circle-alert"/></svg><span id="login-error-text"></span></p>
+      </div>
+      <button type="submit" class="pill pill-primary pill-block" id="submit" data-i18n="core.login.submit">Log in</button>
+    </form>
+  </main>
+</body>
+</html>
