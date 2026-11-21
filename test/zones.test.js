@@ -232,3 +232,42 @@ test('one zone that keeps failing does not stop the others from being restored; 
   await zs.tick();
   assert.equal(await zoneId(KITCHEN), SSID);
 });
+
+const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (!(await fn())) { if (Date.now() > end) throw new Error('timeout'); await new Promise((r) => setTimeout(r, 20)); } };
+
+test('locate: switches the zones covering the yard off until the first GPS fix, then back on', async (t) => {
+  const { zs, clock, alerts, zoneId } = await setup(t);
+  const loc = await zs.locate('web');
+  assert.deepEqual(loc.zones, [KITCHEN]);
+  assert.equal(await zoneId(KITCHEN), SSID + OFF_MARKER);
+  assert.equal(await zoneId(NEIGHBOUR), 'a0:00:00:00:00:02');
+  assert.equal((await zs.locate('web')).since, loc.since); // a second press while running changes nothing
+  const t0 = Math.floor(clock.now() / 1000);
+  zs.onFix({ tracker_id: TID, t: t0 + 20, sensor: 'KNOWN_WIFI', psz_id: KITCHEN, acc: 30 }); // a Wi-Fi pin is no GPS fix
+  assert.ok(zs.locateStatus().active);
+  zs.onFix({ tracker_id: TID, t: t0 + 40, sensor: 'GPS', acc: 7, lat: 41, lng: 2 });
+  await waitFor(async () => (await zoneId(KITCHEN)) === SSID);
+  assert.equal(zs.locateStatus().active, null);
+  assert.equal(zs.locateStatus().last.reason, 'fix');
+  assert.equal(zs.locateStatus().last.acc, 7);
+  assert.ok(alerts.some((a) => a.kind === 'zone_confirmed' && a.title.startsWith('Located')));
+});
+
+test('locate: no GPS fix within 2 h switches the zones back on; a zone the user took over is left alone', async (t) => {
+  const { zs, clock, alerts, zoneId } = await setup(t, {
+    flags: () => [{ id: KITCHEN, coversYard: true, off: false }, { id: NEIGHBOUR, coversYard: true, off: false }],
+  });
+  await zs.locate('web');
+  await zs.switchZone(NEIGHBOUR, false, 'telegram:1'); // already off by the locate: the user now owns it
+  clock.advance(2 * 3600e3 + 1000);
+  await zs.tick();
+  assert.equal(await zoneId(KITCHEN), SSID);
+  assert.equal(await zoneId(NEIGHBOUR), `a0:00:00:00:00:02${OFF_MARKER}`);
+  assert.equal(zs.locateStatus().last.reason, 'timeout');
+  assert.ok(alerts.some((a) => a.kind === 'zone_failed'));
+});
+
+test('locate: refused with 409 when no zone covers the yard or holds the tracker', async (t) => {
+  const { zs } = await setup(t, { flags: () => [] });
+  await assert.rejects(zs.locate('web'), (e) => e.status === 409);
+});

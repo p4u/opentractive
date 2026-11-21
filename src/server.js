@@ -327,6 +327,23 @@ export function startServer({ store, app, config = {}, port = 8080, host = '127.
       await app.refresh('public_share');
       return [204, null];
     },
+    // Locate now: Tractive's own position request when the account allows it, otherwise the Wi-Fi zones that cover the
+    // yard are switched off until the first GPS fix. {cancel: true} ends a running zone locate.
+    'POST /api/locate': async ({ body }) => {
+      if (body.cancel === true) { await app.zoneSwitch.cancelLocate(); return [200, { mode: 'zone', ...app.zoneSwitch.locateStatus() }]; }
+      if (app.posRequestAllowed()) {
+        const r = await app.monitor.command('web', app.followedId, 'pos_request', true);
+        return [200, { mode: 'pos_request', result: r }];
+      }
+      return [200, { mode: 'zone', ...{ active: await app.zoneSwitch.locate('web') } }];
+    },
+    'POST /api/zones/yard': async ({ body }) => {
+      if (typeof body.on !== 'boolean') fail(400, 'on must be true or false');
+      const flags = app.monitor.pszFlags().filter((f) => f.coversYard);
+      if (!flags.length) fail(409, 'No Wi-Fi zone covers the yard.');
+      for (const f of flags) await app.zoneSwitch.switchZone(f.id, body.on, 'web');
+      return [200, { zones: app.zoneSwitch.status() }];
+    },
     'POST /api/psz/:zid/switch': async ({ params: { zid }, body }) => {
       if (typeof body.on !== 'boolean') fail(400, 'on must be true or false');
       if (!(store.getRaw(`psz:${app.followedId}`) ?? []).some((x) => x._id === zid)) fail(404, 'unknown zone');
@@ -590,6 +607,7 @@ export function startServer({ store, app, config = {}, port = 8080, host = '127.
       return [502, { error: `Tractive: ${err.tractiveMessage ?? 'request failed'}`, tractive: { status: err.status, code: err.code ?? null } }];
     }
     if (err instanceof RangeError) return [400, { error: err.message }];
+    if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 500) return [err.status, { error: err.message }]; // e.g. the zone switch
     log(`http error: ${err?.message ?? err}`);
     return [500, { error: 'internal error' }];
   }

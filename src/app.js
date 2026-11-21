@@ -81,7 +81,7 @@ export function createApp({
   const zoneSwitch = createZoneSwitch({
     store, tractive, trackerId: followed, zones: () => zones(), refresh: () => refresh('power_saving_zone'),
     inWindow: () => inWindow(monitor.settings().yardWatch.windows, now(), tz), settings: () => monitor.settings(),
-    flags: () => monitor.pszFlags(), now, log, notify: () => emitEvent('state', app.statePayload()),
+    flags: () => monitor.pszFlags(), currentZone: () => live.get(followed())?.pszId ?? null, now, log, notify: () => emitEvent('state', app.statePayload()),
     raise: (kind, opts) => monitor.raiseAlert(kind, opts),
   });
 
@@ -437,6 +437,7 @@ export function createApp({
       yard: (() => { const y = monitor.yard(); return y && { id: y.id, name: y.name, polygon: y.polygon.map((p) => [p.lat, p.lng]) }; })(),
       psz: monitor.pszFlags(),
       zones: zoneSwitch.status(),
+      locate: zoneSwitch.locateStatus(),
       settings: { yardGeofenceId: s.yardGeofenceId, yardWatchEnabled: s.yardWatch.enabled, chaseAuto: s.chase.auto },
       telegram: telegram.status(),
       alerts: { unacked: store.unackedCritical() },

@@ -1,8 +1,7 @@
 import { register, t } from '../i18n.js';
 import dict from '../i18n/live.js';
 import {
-  getPositions, getSettings, putSettings, sendCommand, setChase, setWalk, setPowerMode, setLiveTimeout, retryLogin,
-} from '../api.js';
+  getPositions, getSettings, putSettings, sendCommand, setChase, setWalk, setPowerMode, setLiveTimeout, retryLogin, locateNow, setYardZones } from '../api.js';
 import { relTime, fmtTime, metres, countdown } from '../format.js';
 import {
   esc, icon, ledger, statusLine, notice, emptyState, errorState, confirmDialog, every, toast, apiErrorText,
@@ -130,6 +129,15 @@ export async function render(root, { state, signal, bus }) {
     const p = ctl().posRequest ?? {}; const pos = tracker()?.position;
     if (ctlText.locate) return ctlText.locate;
     if (busy.locate?.phase === 'sending') return t('live.sending');
+    if (state.capabilities?.posRequest === false) { // locate by switching the Wi-Fi zone off until the first GPS fix
+      const a = state.locate?.active, last = state.locate?.last;
+      if (a) return t('live.locate.zoneOn', { since: fmtTime(a.since * 1000), until: fmtTime(a.until * 1000) });
+      if (last && nowS() - last.endedAt < 2 * 3600) {
+        if (last.reason === 'fix') return t('live.locate.located', { at: fmtTime(last.fixAt * 1000), acc: Math.round(last.acc ?? 0) });
+        if (last.reason === 'timeout') return t('live.locate.noFix', { at: fmtTime(last.endedAt * 1000) });
+      }
+      return t('live.locate.idle');
+    }
     if (!p.pending || (p.at != null && pos?.t >= p.at)) return t('live.locate.idle');
     return p.at != null && nowS() > p.at + (p.timeout ?? 30) + 15 ? t('live.locate.gaveUp') : t('live.locate.pending');
   }
@@ -145,10 +153,18 @@ export async function render(root, { state, signal, bus }) {
     const ywText = ctlText.yw ?? (sending('yw') ? t('live.sending') : t(`live.yw.${ywStatus}`, { n: settings?.yardWatch?.minBattery ?? 35 }));
     const walk = m.walk;
     const power = tr.powerMode;
-    const locateOff = state.capabilities?.posRequest === false;
+    const zoneMode = state.capabilities?.posRequest === false;
+    const coverIds = new Set((state.psz ?? []).filter((z) => z.coversYard).map((z) => z.id));
+    const locActive = !!state.locate?.active;
+    const locateOff = zoneMode && !coverIds.size && !locActive;
+    const yardZoneOff = (state.zones ?? []).some((z) => z.off && coverIds.has(z.id));
+    const locateBtn = locActive
+      ? `<button type="button" class="pill pill-outline" data-locate-stop data-testid="locate-btn"${sending('locate') ? ' disabled' : ''}>${icon('x', { size: 16 })}${esc(t('live.locate.stop'))}</button>`
+      : `<button type="button" class="pill pill-outline" data-locate data-testid="locate-btn"${sending('locate') || locateOff ? ' disabled' : ''}>${icon('locate-fixed', { size: 16 })}${esc(t('live.locate.btn'))}</button>`;
     const rows = [
       row({ name: 'live', label: t('live.live.label'), hint: t('live.live.hint'), control: sw('live', 'live-toggle', t('live.live.label'), wantOf('live', !!(m.live?.manual || c.live?.active)), sending('live') || !!tr.pszId), status: liveStatusText(), statusId: 'live-status' }),
-      row({ name: 'locate', label: t('live.locate.label'), hint: locateOff ? t('live.locate.unavailable') : t('live.locate.hint'), control: `<button type="button" class="pill pill-outline" data-locate data-testid="locate-btn"${sending('locate') || locateOff ? ' disabled' : ''}>${icon('locate-fixed', { size: 16 })}${esc(t('live.locate.btn'))}</button>`, status: locateText(), statusId: 'locate-status' }),
+      row({ name: 'locate', label: t('live.locate.label'), hint: locateOff ? t('live.locate.unavailable') : zoneMode ? t('live.locate.zoneHint') : t('live.locate.hint'), control: locateBtn, status: locateText(), statusId: 'locate-status' }),
+      coverIds.size ? row({ name: 'zone', label: t('live.zone.label'), hint: t('live.zone.hint'), control: sw('zone', 'zone-toggle', t('live.zone.label'), wantOf('zone', yardZoneOff), sending('zone')), status: ctlText.zone ?? (sending('zone') ? t('live.sending') : yardZoneOff ? t('live.zone.offNow') : t('live.zone.onNow')), statusId: 'zone-status' }) : '',
       row({ name: 'led', label: t('live.led.label'), hint: t('live.led.hint'), control: sw('led', 'led-toggle', t('live.led.label'), wantOf('led', !!c.led?.active), sending('led')), status: stateText('led', c.led?.active, c.led?.pending) }),
       row({ name: 'buzzer', label: t('live.buzzer.label'), hint: t('live.buzzer.hint'), control: sw('buzzer', 'buzzer-toggle', t('live.buzzer.label'), wantOf('buzzer', !!c.buzzer?.active), sending('buzzer')), status: stateText('buzzer', c.buzzer?.active, c.buzzer?.pending) }),
       row({ name: 'chase', label: t('live.chase.label'), hint: t('live.chase.hint'), control: sw('chase', 'chase-toggle', t('live.chase.label'), wantOf('chase', !!m.chase), sending('chase')), status: ctlText.chase ?? (sending('chase') ? t('live.sending') : m.chase ? t('live.chase.since', { time: fmtTime(m.chase.since * 1000) }) : t('live.off')) }),
@@ -221,11 +237,14 @@ export async function render(root, { state, signal, bus }) {
         state.settings = { ...state.settings, yardWatchEnabled: !!saved.yardWatch.enabled };
       }, { confirmed: true });
     }
+    if (name === 'zone') return act('zone', on, async () => { const r = await setYardZones(!on); state.zones = r.zones; }, { confirmed: true });
     if (el.matches('[data-timeout]')) return act('timeout', null, () => setLiveTimeout(tid(), Number(el.value)), { confirmed: true });
   });
   ctlEl.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.matches('[data-locate]')) act('locate', true, () => sendCommand(tid(), 'pos_request', true), { confirmed: true });
+    if (b.matches('[data-locate]')) {
+      act('locate', true, async () => { const r = await locateNow(); if (r.mode === 'zone') state.locate = { ...state.locate, active: r.active }; }, { confirmed: true });
+    } else if (b.matches('[data-locate-stop]')) act('locate', null, async () => { const r = await locateNow({ cancel: true }); state.locate = { active: r.active, last: r.last }; }, { confirmed: true });
     else if (b.dataset.power) act('power', null, () => setPowerMode(tid(), b.dataset.power), { confirmed: true });
     else if (b.matches('[data-yw-dur]')) act('timeout', null, () => setLiveTimeout(tid(), 3600), { confirmed: true });
     else if (b.dataset.walk) act('walk', null, async () => { state.monitor = await setWalk(b.dataset.walk === 'until' ? 720 : Number(b.dataset.walk)); }, { confirmed: true });

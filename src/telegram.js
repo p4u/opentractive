@@ -198,7 +198,13 @@ export function createTelegram({
     status: () => statusText(),
     where: (chat) => where(chat),
     live: async (chat, [a], actor) => { const on = need(onOff(a), 'live'); await monitor.setManualLive(on, actor); return `Live tracking ${on ? 'on' : 'off'} requested.`; },
-    locate: async (chat, args, actor) => { if (!posRequestAllowed()) return 'Locate now is not available for this Tractive account.'; await monitor.command(actor, tid(), 'pos_request', true); return 'Position requested.'; },
+    locate: async (chat, args, actor) => {
+      if (posRequestAllowed()) { await monitor.command(actor, tid(), 'pos_request', true); return 'Position requested.'; }
+      const zs = zoneSwitch();
+      if (!zs) return 'Locate now is not available for this Tractive account.';
+      const loc = await zs.locate(actor);
+      return `Locating: the Wi-Fi zone is off until the first GPS fix (at most until ${hhmm(loc.until)}). The tracker reports it once it moves.`;
+    },
     led: trackerCmd('led_control', 'led'),
     buzz: trackerCmd('buzzer_control', 'buzz'),
     chase: async (chat, [a], actor) => {

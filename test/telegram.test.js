@@ -557,3 +557,15 @@ test('/zone lists the Wi-Fi zones and switches the ones covering the yard, or on
   assert.ok(texts.some((x) => x.includes('Usage: /zone')));
   assert.deepEqual(calls, [['z1', false, 'telegram:1001'], ['z2', false, 'telegram:1001'], ['z1', true, 'telegram:1001'], ['z2', true, 'telegram:1001']]);
 });
+
+test('/locate without Tractive position requests switches the Wi-Fi zone off until the first GPS fix', async (t) => {
+  const calls = [];
+  const zoneSwitch = { status: () => [], locate: async (actor) => { calls.push(actor); return { since: 1_790_000_000, until: 1_790_007_200, zones: ['z1'] }; } };
+  const { mock, monitor, bot } = await setup(t, { posRequestAllowed: () => false, zoneSwitch: () => zoneSwitch });
+  await say(mock, 1001, '/locate');
+  await until(() => bot.status().handled >= 1, { timeout: 5000 });
+  await bot.idle();
+  assert.deepEqual(calls, ['telegram:1001']);
+  assert.ok((await textsTo(mock, 1001)).some((x) => x.startsWith('Locating: the Wi-Fi zone is off until the first GPS fix')));
+  assert.ok(!monitor.calls.some((c) => c[0] === 'command'));
+});

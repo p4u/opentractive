@@ -32,7 +32,7 @@ const json = async (res) => ({ status: res.status, body: await res.json().catch(
 const ROUTES = [
   ['GET', '/api/state'], ['GET', '/api/stream'], ['POST', `/api/tracker/${TID}/command`], ['PUT', `/api/tracker/${TID}/power-mode`],
   ['PUT', `/api/tracker/${TID}/live-timeout`], ['GET', `/api/tracker/${TID}`], ['POST', `/api/tracker/${TID}/reachable-notification`],
-  ['POST', `/api/tracker/${TID}/share`], ['DELETE', `/api/share/${IDS.share}`], ['DELETE', `/api/psz/${IDS.pszIn}`], ['POST', `/api/psz/${IDS.pszIn}/switch`],
+  ['POST', `/api/tracker/${TID}/share`], ['DELETE', `/api/share/${IDS.share}`], ['DELETE', `/api/psz/${IDS.pszIn}`], ['POST', `/api/psz/${IDS.pszIn}/switch`], ['POST', '/api/locate'], ['POST', '/api/zones/yard'],
   ['GET', `/api/tracker/${TID}/geofences`], ['POST', `/api/tracker/${TID}/geofences`], ['PUT', `/api/geofences/${IDS.yard}`], ['DELETE', `/api/geofences/${IDS.yard}`],
   ['GET', '/api/positions'], ['GET', '/api/positions.gpx'], ['POST', '/api/positions/backfill'], ['GET', '/api/escapes'], ['POST', '/api/escapes/recompute'],
   ['PATCH', '/api/escapes/1'], ['GET', '/api/alerts'], ['POST', '/api/alerts/1/ack'], ['POST', '/api/alerts/1/false-alarm'], ['GET', '/api/settings'],
@@ -476,4 +476,27 @@ test('wi-fi zone switch: validated, foreign zones refused, off and on through th
   const on = await json(await sw(IDS.pszIn, '{"on":true}'));
   assert.equal(on.body.off, false);
   assert.equal((await zone()).zone_id, 'a0:00:00:00:00:01');
+});
+
+test('locate now: Tractive position request when allowed; otherwise the yard zone is off until the first GPS fix', async (t) => {
+  const { request, mock, store, app } = await setup(t);
+  const loc = (body = {}) => request('/api/locate', { method: 'POST', body: JSON.stringify(body) });
+  assert.equal((await json(await loc())).body.mode, 'pos_request');
+  const user = store.getRaw('user');
+  store.setRaw('user', { ...user, settings: { ...user.settings, pos_request_allowed: false } });
+  const r = await json(await loc());
+  assert.equal(r.status, 200);
+  assert.equal(r.body.mode, 'zone');
+  assert.deepEqual(r.body.active.zones, [IDS.pszIn]);
+  assert.match((await app.tractive.powerSavingZone(IDS.pszIn)).zone_id, /~ot-off$/);
+  await mock.post('/__mock/fix', { lat: 41.0, lng: 2.0, acc: 6, sensor: 'GPS', dtS: 2 }); // the tracker wakes and reports GPS
+  await until(async () => (await json(await request('/api/state'))).body.locate.active === null, { timeout: 8000 });
+  const st = (await json(await request('/api/state'))).body;
+  assert.equal(st.locate.last.reason, 'fix');
+  assert.equal((await app.tractive.powerSavingZone(IDS.pszIn)).zone_id, 'a0:00:00:00:00:01');
+  // the Live page switch: every zone covering the yard off, then on
+  const yard = (on) => request('/api/zones/yard', { method: 'POST', body: JSON.stringify({ on }) });
+  assert.equal((await yard('x')).status, 400);
+  assert.equal((await json(await yard(false))).body.zones.find((z) => z.id === IDS.pszIn).off, true);
+  assert.equal((await json(await yard(true))).body.zones.find((z) => z.id === IDS.pszIn).off, false);
 });
