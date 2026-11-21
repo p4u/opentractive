@@ -62,7 +62,7 @@ export async function startMock({ port = 0, host = '127.0.0.1', keepAliveMs = 10
       ],
       timelinePaging: fx('timeline').paging,
       issued: new Set(), fails: [], requests: [], channels: new Set(), counters: { inj: 0, share: 1 },
-      tg: { updates: [], nextUpdateId: 1, sent: [], nextMessageId: 1, stopped: new Set(), lastLoc: new Map(), waiters: new Set() },
+      tg: { updates: [], nextUpdateId: 1, sent: [], nextMessageId: 1, stopped: new Set(), lastLoc: new Map(), texts: new Map(), waiters: new Set() },
     };
   }
 
@@ -228,9 +228,10 @@ export async function startMock({ port = 0, host = '127.0.0.1', keepAliveMs = 10
           });
         }
       }
-      case 'sendMessage': case 'sendLocation': {
+      case 'sendMessage': case 'sendLocation': case 'sendVenue': {
         const id = tg.nextMessageId++;
         if (m[2] === 'sendLocation') tg.lastLoc.set(id, `${b.latitude},${b.longitude}`);
+        if (m[2] === 'sendMessage') tg.texts.set(id, JSON.stringify([b.text, b.reply_markup ?? null]));
         return ok({ message_id: id, chat: { id: b.chat_id }, date: nowS() });
       }
       case 'editMessageLiveLocation': {
@@ -240,7 +241,15 @@ export async function startMock({ port = 0, host = '127.0.0.1', keepAliveMs = 10
         tg.lastLoc.set(b.message_id, loc);
         return ok(true);
       }
+      case 'editMessageText': { // like Telegram: an edit that changes neither the text nor the keyboard is refused
+        const cur = JSON.stringify([b.text, b.reply_markup ?? null]);
+        if (tg.texts.get(Number(b.message_id)) === cur) return bad('Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message');
+        tg.texts.set(Number(b.message_id), cur);
+        return ok(true);
+      }
       case 'stopMessageLiveLocation': tg.stopped.add(b.message_id); return ok(true);
+      case 'pinChatMessage': return b.chat_id === 'nopin' || Number(b.chat_id) < -9000 ? bad('Bad Request: not enough rights to manage pinned messages in the chat') : ok(true);
+      case 'setMyCommands': return ok(true);
       case 'answerCallbackQuery': case 'editMessageReplyMarkup': case 'deleteWebhook': return ok(true);
       default: return [404, { ok: false, error_code: 404, description: 'Not Found' }];
     }

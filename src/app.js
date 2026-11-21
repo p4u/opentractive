@@ -75,7 +75,7 @@ export function createApp({
     chatIds: (env.TELEGRAM_CHAT_IDS || '').split(',').map((s) => s.trim()).filter((s) => /^-?\d{1,20}$/.test(s)),
     botName: env.TELEGRAM_BOT_NAME || undefined, store, monitor, live, trackerId: followed, posRequestAllowed, zoneSwitch: () => zoneSwitch,
     petName: () => petOf(followed())?.details?.name || 'The dog', escapesSummary: () => escapesSummary(),
-    appUrl: env.APP_URL || '', now, log, ...telegramOptions,
+    appUrl: env.APP_URL || '', panelEveryMs: Math.min(Math.max(Number(env.TELEGRAM_PANEL_REFRESH_S) || 20, 5), 3600) * 1000, now, log, ...telegramOptions,
   });
 
   const zoneSwitch = createZoneSwitch({

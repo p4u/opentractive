@@ -47,6 +47,7 @@ Defined in `.env.example`. An empty default means the setting is off or taken fr
 | `TELEGRAM_BOT_TOKEN` | empty | Telegram bot token. Empty turns the bot off. |
 | `TELEGRAM_BOT_NAME` | empty | Bot name shown in the UI until the bot answers `getMe`. |
 | `TELEGRAM_CHAT_IDS` | empty | Comma-separated chat ids approved at start. Pairing from the web app also works. |
+| `TELEGRAM_PANEL_REFRESH_S` | `20` | Seconds (5-3600) between checks of a pinned Telegram panel; it is edited only when something changed. |
 | `APP_URL` | empty | Public URL of this app; used for links in Telegram messages. |
 | `OT_BIND` | `127.0.0.1` | Host address published by docker compose. |
 | `OT_PORT` | `8090` | Host port published by docker compose. |
@@ -74,9 +75,18 @@ Keep `OT_BIND=127.0.0.1` and publish the port through your proxy, or set `OT_BIN
 2. Open the Telegram page in the app and generate a pairing code.
 3. Send `/start <code>` to the bot in a private chat, or `/start@<botname> <code>` in a group.
 
-Every member of a paired group can use every command. Commands:
+Every member of a paired group can use every command and button.
+
+- **Control panel**: `/panel` (also `/status` and `/start`) sends a status card with buttons for every action: where, locate, live, chase, yard watch, Wi-Fi zones, walk, mute, light and buzzer. The buttons edit the same message instead of posting new ones. Its last line shows the result of the last action, who pressed it, and when. `/mute`, `/led`, `/buzz` and `/zone` sent without arguments open the panel at their buttons.
+- **Pinned live panel**: `/pin` pins a panel that updates itself (silently) when the state changes, so the top of the group always shows where the pet is. In a group the bot has to be an admin with the right to pin messages.
+- **Alerts** carry Got it / Live / Buzz / Where buttons, plus "It's a walk" and "False alarm" on an escape. Once someone handles an alert, the card records it ("✅ Got it · Ana · 11:42") and keeps only the buttons that still make sense.
+- `/where` answers with a map card showing the pet's name, accuracy and the time of the fix. In groups, answers reply to the message that asked, in the same topic when the group uses topics. The "/" menu lists every command with a short description.
+
+Commands:
 
 ```
+/panel    control panel with buttons
+/pin      pin a panel that keeps itself up to date
 /status   where the pet is, battery, last fix and modes
 /where    last position on the map
 /live on|off      live tracking
