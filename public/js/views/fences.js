@@ -120,11 +120,22 @@ export async function render(root, ctx) {
         + (err.status === 409 ? `<button type="button" class="pill pill-outline" data-reload>${esc(t('fences.reload'))}</button>` : '');
       slot.querySelector('[data-reload]')?.addEventListener('click', load);
     };
+    // one save per fence at a time: a save waits in the request queue, and a second click would send a stale _version
+    const saving = new Set();
     const save = async (row, over, extra) => {
+      const id = row.dataset.id;
+      if (saving.has(id)) return;
+      saving.add(id);
+      const controls = [...row.querySelectorAll('button, input, select')];
+      for (const c of controls) c.disabled = true;
+      row.querySelector('[data-err]').innerHTML = `<p class="hint" data-testid="fence-saving">${esc(t('fences.saving'))}</p>`;
       try {
-        await updateGeofence(row.dataset.id, putBody(byId.get(row.dataset.id), { ...over, ...extra }));
+        await updateGeofence(id, putBody(byId.get(id), { ...over, ...extra }));
         await load();
-      } catch (err) { fail(row, err); }
+      } catch (err) {
+        for (const c of controls) c.disabled = false;
+        fail(row, err);
+      } finally { saving.delete(id); }
     };
     el.addEventListener('change', async (e) => {
       const row = rowOf(e.target);

@@ -500,3 +500,13 @@ test('locate now: Tractive position request when allowed; otherwise the yard zon
   assert.equal((await json(await yard(false))).body.zones.find((z) => z.id === IDS.pszIn).off, true);
   assert.equal((await json(await yard(true))).body.zones.find((z) => z.id === IDS.pszIn).off, false);
 });
+
+test('a geofence save with a stale version (Tractive answers 400 "Provided version … was not equal to local version") is a 409', async (t) => {
+  const { request, mock } = await setup(t);
+  await mock.post('/__mock/fail', { match: `PUT /graph/4/geofence/${IDS.yard}`, status: 400, times: 1, body: { code: 4000, message: 'Provided version 0f86b22a was not equal to local version.' } });
+  const list = await json(await request(`/api/tracker/${TID}/geofences`));
+  const g = list.body.find((x) => x._id === IDS.yard);
+  const r = await json(await request(`/api/geofences/${IDS.yard}`, { method: 'PUT', body: JSON.stringify({ name: g.name, shape: g.shape, coords: g.coords, fence_type: g.fence_type, _version: g._version }) }));
+  assert.equal(r.status, 409);
+  assert.equal(r.body.error, 'changed elsewhere');
+});

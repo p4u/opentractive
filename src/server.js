@@ -231,7 +231,9 @@ export function startServer({ store, app, config = {}, port = 8080, host = '127.
   };
   // TractiveError 409/412 on a versioned PUT: someone changed the object since the client loaded it.
   const versioned = (p) => p.catch((e) => {
-    if (e instanceof TractiveError && !(e instanceof RateLimited) && (e.status === 409 || e.status === 412)) fail(409, 'changed elsewhere');
+    // Tractive answers a stale _version with 400 "Provided version … was not equal to local version" (409/412 elsewhere)
+    const stale = e.status === 409 || e.status === 412 || (e.status === 400 && /version/i.test(e.tractiveMessage ?? ''));
+    if (e instanceof TractiveError && !(e instanceof RateLimited) && stale) fail(409, 'changed elsewhere');
     throw e;
   });
   const fences = () => store.getRaw(`geofences:${app.followedId}`) ?? [];

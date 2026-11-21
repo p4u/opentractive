@@ -33,6 +33,7 @@ export default {
     'fences.delete': 'Delete',
     'fences.delete.title': 'Delete fence {name}?',
     'fences.delete.body': 'Tractive stops watching it. This cannot be undone.',
+    'fences.saving': 'Saving… (Tractive requests are spaced a few seconds apart)',
     'fences.conflict': 'This fence was changed elsewhere. Reload and try again.',
     'fences.reload': 'Reload',
     'fences.empty.title': 'No fences yet',
